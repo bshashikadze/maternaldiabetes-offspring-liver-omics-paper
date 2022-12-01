@@ -977,46 +977,51 @@ ggsave("metabolomics_main.svg", width = w1+w1, height = 6.2+w1)
 #### metabolomics figure 2
 ```{r}
 p1 <-   rectGrob(width = 1, height = 1)
-p2 <-   plot_grid(plot_Hmap_gl, p1, rel_widths = c(1,1), rel_heights = c(3.95, 0.15), ncol = 1)
+p2 <-   plot_grid(p1, plot_Hmap_gl, p1, rel_widths = c(1,1,1), rel_heights = c(0.05, 3.9, 0.15), ncol = 1)
 p3 <-   plot_grid(p2, data_other_sig, labels = c("A", "B"), rel_widths = c(3.1, 4), rel_heights = c(1,1), label_size = 17)
-p4 <-   plot_grid(p3, p1, rel_widths = c(1,1), rel_heights = c(4.1,0.2), nrow = 2, label_size = 17)
+p4 <-   plot_grid(p3, p1, rel_widths = c(1,1), rel_heights = c(4.1,0.3), nrow = 2, label_size = 17)
 p5 <-   plot_grid(plot_ratios, p1, nrow = 2, rel_widths = c(1,1), rel_heights = c(3.7,0.3), labels = c("C"), label_size = 17)
 p6 <-   plot_grid(p1, plot_corr, nrow = 2, rel_widths = c(1,1), rel_heights = c(0.285,3.715), labels = c("D"), label_size = 17)
 p7 <-   plot_grid(p5, p6, rel_widths = c(3.7,3.4), rel_heights = c(1,1))
-plot_grid(p4, p7, nrow = 2, rel_widths = c(1,1), rel_heights = c(4.3, 3.5))
-ggsave("metabolomics_figure_2.svg", width = 7.1, height = 7.8)
+plot_grid(p4, p7, nrow = 2, rel_widths = c(1,1), rel_heights = c(4.5, 3.5))
+ggsave("metabolomics_figure_2.svg", width = 7.1, height = 7.9)
 ```
 
 
 ### save data in a supplementary tables
 ```{r}
+if (!file.exists("Supplementary table 2.xlsx")) {
+  
 # metabolomics data (all)
-write.xlsx(as.data.frame(metabolomics_data), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1A", 
+write.xlsx(as.data.frame(metabolomics_data), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1A", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1D", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1E", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1E", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios)
-write.xlsx(as.data.frame(anova_results_ratios), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
+write.xlsx(as.data.frame(anova_results_ratios), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios significant by group)
-write.xlsx(as.data.frame(anova_results_ratios_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1G", 
+write.xlsx(as.data.frame(anova_results_ratios_group), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 1G", 
   col.names = TRUE, row.names = FALSE, append = T)
+
+
+}
 ```
 
 

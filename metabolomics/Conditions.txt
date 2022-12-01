@@ -1,5 +1,4 @@
 Bioreplicate	Group	Sex	ID
-D1_f_d3_HG	HG	F	D1
 D13_m_d3_NG	NG	M	D13
 D14_f_d3_NG	NG	F	D14
 D18_f_d3_NG	NG	F	D18
@@ -10,6 +9,7 @@ D22_f_d3_NG	NG	F	D22
 D23_m_d3_NG	NG	M	D23
 D28_f_d3_NG	NG	F	D28
 D29_m_d3_NG	NG	M	D29
+D1_f_d3_HG	HG	F	D1
 D32_f_d3_HG	HG	F	D32
 D36_f_d3_HG	HG	F	D36
 D37_f_d3_HG	HG	F	D37
