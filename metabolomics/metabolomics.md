@@ -273,7 +273,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
                rename(`THSD pair` = 2)) %>% 
-  arrange(filter_based)
+  arrange(desc(filter_based))
   
   
   # data for interaction plot
@@ -504,7 +504,7 @@ hmap <- Heatmap(as.matrix(data_HM),
                 clustering_method_columns   = "ward.D",
                 use_raster = F,
                 top_annotation              = hmap_all_data[[3]],
-                width                       = unit(2.6, "in"),
+                width                       = unit(3.2, "in"),
                 height                      = unit(4.72, "in"), 
                 col                         = hmap_all_data[[1]], 
                 border                      = TRUE,
@@ -524,7 +524,7 @@ h1 = convertY(h1, "inch", valueOnly = TRUE)
 c(w1, h1)
 ```
 
-    ## [1] 3.100355 5.686221
+    ## [1] 3.700355 5.686221
 
 ``` r
 #for cowplot
@@ -603,6 +603,16 @@ data_oplsda <- oplsda_function(data_stat %>% column_to_rownames("Metabolite"), s
 
 ![](metabolomics_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
+``` r
+# metabolomics data with VIP scores
+anova_results <- anova_results %>% 
+  left_join(data_oplsda[[2]] %>% select(Metabolite, VIP)) %>% 
+  rename("VIP score (HG/NG)" = VIP) %>% 
+  relocate("VIP score (HG/NG)", .after = `l2fc group (HG/NG)`)
+```
+
+    ## Joining, by = "Metabolite"
+
 #### Orthogonal Projections to Latent Structures Discriminant Analysis (OPLS-DA) (plotting)
 
 ``` r
@@ -667,6 +677,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
   geom_point(aes(color = Sex))+
   scale_color_manual(values = c("#F0E442", "#E69F00"))+
   theme_bw()+
+  xlab("")+
   theme(panel.border = element_rect(size = 1, colour = "black"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank(), 
@@ -1088,30 +1099,31 @@ theme(plot.margin = margin(12.7,1,1,1, "mm"))
 #### main figure
 
 ``` r
+p0     <- rectGrob(width = 1, height = 1)
 plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("B", "C"), font.label = list(size = 17),
-          ncol = 1, nrow = 2, widths = c(w1,w1), heights = c(w1,w1))
-plot_2 <- ggarrange(plot_hmap, NA, nrow = 2, heights = c(h1, 6.05-h1), widths = c(w1,w1))
+          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-w1,7.1-w1))
+plot_2 <- ggarrange(plot_hmap, NA, nrow = 2, heights = c(h1, 5.82-h1), widths = c(w1,w1))
 ```
 
     ## Warning in as_grob.default(plot): Cannot convert object of class logical into a
     ## grob.
 
 ``` r
-plot_3 <- plot_grid(plot_2, plot_1, rel_widths = c(w1, w1), rel_heights = c(6.2, 6.2), labels = c('A'), label_size = 17)
-plot_4 <- plot_grid(plot_oplsda, plot_vip, ncol = 2, rel_widths = c(w1, w1), rel_heights = c(w1, w1), labels = c('D','E'), label_size = 17)
-plot_5 <- plot_grid(plot_3, plot_4, nrow = 2, rel_widths = c(w1+w1, w1+w1), rel_heights = c(h1, w1))
-ggsave("metabolomics_main.svg", width = w1+w1, height = 6.2+w1)
+plot_3 <- plot_grid(plot_2, plot_1, rel_widths = c(w1, 7.1-w1), rel_heights = c(h1+(5.82-h1), h1+(5.82-h1)), labels = c('A'), label_size = 17)
+plot_4 <- plot_grid(plot_3, p0, ncol = 1, rel_widths = c(1,1), rel_heights = c(h1+(5.82-h1), 0.1))
+plot_5 <- plot_grid(plot_oplsda, plot_vip, ncol = 2, rel_widths = c(7.1/2, 7.1/2), rel_heights = c(3.35, 3.35), labels = c('D','E'), label_size = 17)
+plot_6 <- plot_grid(plot_4, plot_5, nrow = 2, rel_widths = c(w1+7.1-w1, w1+7.1-w1), rel_heights = c(h1+0.5+(5.82-h1), 3.35))
+ggsave("metabolomics_main.svg", width = 7.1, height = h1+0.5+(5.82-h1)+3.35)
 ```
 
 #### metabolomics figure 2
 
 ``` r
-p1 <-   rectGrob(width = 1, height = 1)
-p2 <-   plot_grid(p1, plot_Hmap_gl, p1, rel_widths = c(1,1,1), rel_heights = c(0.05, 3.9, 0.15), ncol = 1)
+p2 <-   plot_grid(p0, plot_Hmap_gl, p0, rel_widths = c(1,1,1), rel_heights = c(0.05, 3.9, 0.15), ncol = 1)
 p3 <-   plot_grid(p2, data_other_sig, labels = c("A", "B"), rel_widths = c(3.1, 4), rel_heights = c(1,1), label_size = 17)
-p4 <-   plot_grid(p3, p1, rel_widths = c(1,1), rel_heights = c(4.1,0.3), nrow = 2, label_size = 17)
-p5 <-   plot_grid(plot_ratios, p1, nrow = 2, rel_widths = c(1,1), rel_heights = c(3.7,0.3), labels = c("C"), label_size = 17)
-p6 <-   plot_grid(p1, plot_corr, nrow = 2, rel_widths = c(1,1), rel_heights = c(0.285,3.715), labels = c("D"), label_size = 17)
+p4 <-   plot_grid(p3, p0, rel_widths = c(1,1), rel_heights = c(4.1,0.3), nrow = 2, label_size = 17)
+p5 <-   plot_grid(plot_ratios, p0, nrow = 2, rel_widths = c(1,1), rel_heights = c(3.7,0.3), labels = c("C"), label_size = 17)
+p6 <-   plot_grid(p0, plot_corr, nrow = 2, rel_widths = c(1,1), rel_heights = c(0.285,3.715), labels = c("D"), label_size = 17)
 ```
 
     ## Warning: Removed 21 rows containing missing values (geom_text_repel).
