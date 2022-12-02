@@ -57,7 +57,6 @@ data_stat <- metabolomics_data_tidy %>%
 ### fold-change calculation
 ```{r}
 fc_function <- function(data, conditions_data, condition_name, compared_to, id_name, values_log) {
-
   # should values be log transformed?
   if (values_log == TRUE) {
     data_long <- data %>% 
@@ -75,7 +74,7 @@ fc_function <- function(data, conditions_data, condition_name, compared_to, id_n
   #fold-change calculation    
     data_fc <- data_long %>% 
     group_by(!!as.symbol(id_name), !!as.symbol(condition_name)) %>% 
-    summarise(grp_mean = mean(Intensity)) %>% 
+    summarise(grp_mean = mean(Intensity, na.rm=T)) %>% 
     ungroup() 
   
     
@@ -102,7 +101,6 @@ fc_function <- function(data, conditions_data, condition_name, compared_to, id_n
     return(data_fc)
     
     }
-
 
 # calculate fold-change separately for group and sex
 l2fc_group <- fc_function(data_stat, condition = "Group", conditions_data = conditions,
@@ -131,19 +129,16 @@ two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
           pivot_longer(names_to = "Bioreplicate", 
           values_to = "Intensity", -all_of(id_name)) %>% 
           left_join(conditions_file) %>% 
+          drop_na(Intensity) %>% 
           group_by(!!as.symbol(id_name)) %>% 
           summarise(`p-value` = 
           summary(aov(Intensity ~ Group*Sex))[[1]][["Pr(>F)"]][1:3]) 
-
   # correct all resulting p-values (pool) for multiple hypothesis testing
   data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = "BH")
-
   # prepare empty data frame with proper comparisons
   anova_factors <- as.data.frame(rep(c("group (HG/NG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
-
   # rename column 
   names(anova_factors) <- "Comparison"
-
   
   # final anova results
   anova_results  <- as.data.frame(cbind(data_anova, anova_factors)) %>% 
@@ -156,7 +151,6 @@ two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
     anova_results  <- anova_results  %>% 
        left_join(l2fc)
   }
-
   return(anova_results)
   
   }
@@ -216,7 +210,7 @@ anova_results_int <- anova_results %>%
 
 #### define functions that performs 2 way anova Tukey's honest significance difference (interaction significant proteins)
 ```{r}
-tkhsd_fn <- function(data, id_name, conditions_file, filter_based = "Adjusted p-value group:sex") {
+tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data) {
   
   # prepare data
   data_tukey <- data %>% 
@@ -224,7 +218,8 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based = "Adjusted p-
               left_join(data_stat) %>% 
               pivot_longer(names_to = "Bioreplicate", values_to = "Intensity", 
                            -all_of(id_name)) %>% 
-              left_join(conditions_file)
+              left_join(conditions_file) %>% 
+    drop_na(Intensity)
   
   # for loop. for each feature which showed significant interaction from
   # 2 way anova, THSD is calculated. significant pairs are extracted
@@ -251,7 +246,6 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based = "Adjusted p-
                                 nrow=1)
     my_vec[i] <- sig_tuk_interaction
   }
-
  
   # final data with anova and THSD statistics
   tkhsd <- list()
@@ -262,33 +256,35 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based = "Adjusted p-
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
                rename(`THSD pair` = 2)) %>% 
-  arrange(`Adjusted p-value group:sex`)
+  arrange(filter_based)
   
   
   # data for interaction plot
-  tkhsd[[2]] <- data_stat %>%  
+  tkhsd[[2]] <- numeric_data %>%  
   left_join(tkhsd[[1]]) %>% 
-  drop_na() %>% 
+  drop_na(`THSD pair`) %>% 
   select(1:ncol(data_stat)) %>% 
   pivot_longer(values_to = "Intensity", names_to = "Bioreplicate", -all_of(id_name)) %>% 
   left_join(conditions_file) %>% 
   mutate(joinedgr = str_c(Group, Sex, sep = "_")) %>% 
   group_by(!!as.symbol(id_name), joinedgr) %>% 
-  summarise(mean = mean(Intensity), sd = sd(Intensity), t.score = qt(p=0.05/2, df=length(conditions_file$Bioreplicate),lower.tail=F), 
+  summarise(mean = mean(Intensity, na.rm = T), 
+            sd = sd(Intensity, na.rm = T), t.score = qt(p=0.05/2, 
+            df=length(conditions_file$Bioreplicate),lower.tail=F), 
             ci = t.score * sd ) %>% 
   ungroup() %>% 
   separate(joinedgr, c("Group", "Sex")) 
   
   return(tkhsd)
-
 }
 ```
 
 
 ##### THSD of metabolite interactions
 ```{r}
-anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metabolite",  conditions_file = conditions)
+anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metabolite", numeric_data = data_stat, filter_based = "p-value group:sex", conditions_file = conditions)
 ```
+
 
 
 ## volcano plot
@@ -300,11 +296,12 @@ data_volcano <- anova_results %>%
                 `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) | `Adjusted p-value group (HG/NG)` < 0.05 & 
                 `l2fc group (HG/NG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
                 diff_abundant = case_when(
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) ~ "Increased_in_HG",
+                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) ~  "Increased_in_HG",
                 `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` < -log2(1.5) ~ "Decreased_in_HG",
              TRUE ~ "n.s."
            )) 
 ```
+
 
 
 ### plot volcano plot
@@ -314,15 +311,16 @@ plot_volcano <- ggplot(data_volcano %>%
                        mapping = aes(x = `l2fc group (HG/NG)`, y = -log10(`p-value group (HG/NG)`), 
                                      fill=Class, label = Metabolite))+
          geom_point(size = 2.2, shape =21, stroke = 0.25)+
-         scale_fill_manual(values=c("Glycerophospholipids" = "#0b5575ff", 
-                                    "Biogenic Amines"      = "#E69F00",      
-                                    "Sphingolipids"        = "#CC79A7",
-                                    "Aminoacids"           = "#009E73",
-                                    "Acylcarnitines"       = "#F0E442",
-                                    "Sugars"               = "#0072B2"))+
-         geom_hline(yintercept = 2.19731, linetype    = "dashed", color = 'red') +
-         geom_vline(xintercept = -log2(1.5), linetype = "dashed", color = 'red') +
-         geom_vline(xintercept = log2(1.5), linetype  = "dashed", color = 'red') +
+         scale_fill_manual(values=c("Glycerophospholipids" = "#6A3D9A", 
+                                    "Biogenic Amines"      = "#FB9A99",      
+                                    "Sphingolipids"        = "#E31A1C",
+                                    "Aminoacids"           = "#B2DF8A",
+                                    "Acylcarnitines"       = "#FFFF99",
+                                    "Sugars"               = "#33A02C"))+
+         geom_hline(yintercept = -log10(max(data_volcano$`p-value group (HG/NG)`[data_volcano$significant=="+"])), 
+                    linetype    = "dashed", color = 'black') +
+         geom_vline(xintercept = -log2(1.5), linetype = "dashed", color = 'black') +
+         geom_vline(xintercept =  log2(1.5), linetype  = "dashed", color = 'black') +
          theme_bw()+
          scale_x_continuous(limits = c(-1.5, 1.5), breaks = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5)) +
          scale_y_continuous(limits = c(0,8), breaks = c(0,2,4,6,8)) +
@@ -397,7 +395,7 @@ data_pca <- pca_fn(data_stat, conditions, id_name = "Metabolite")
 ```{r}
 plot_pca <- ggplot(data=data_pca[[1]], aes(x=X*-1, y=Y, fill= Group, label = ID))+
 geom_point(size = 3, aes(shape = Sex), stroke = 0.25)+
-scale_fill_manual(values= c('NG' = "#0088AA", 'HG' = "#e95559ff")) +
+scale_fill_manual(values= c('HG' = "#e95559ff", 'NG' = "#0088AA")) +
 scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
 xlab(paste("PC 1 - ", data_pca[[2]][1], "%", sep=""))+
 ylab(paste("PC 2 - ", data_pca[[2]][2], "%", sep=""))+
@@ -542,8 +540,8 @@ oplsda_function <- function (data, scaling = "pareto", n_perm = 200,
     left_join(stat_data) %>% 
     mutate(VIP_sig = case_when(VIP > vip_thresh ~ "+")) %>% 
     mutate(Regulation = case_when(
-      `l2fc group (HG/NG)` > 0 & VIP_sig  == "+" ~ "up in HG",
-      `l2fc group (HG/NG)`  < 0 & VIP_sig == "+" ~ "down in HG",
+      `l2fc group (HG/NG)` > 0 & VIP_sig  == "+" ~ "Increased in HG",
+      `l2fc group (HG/NG)`  < 0 & VIP_sig == "+" ~ "Decreased in HG",
       TRUE ~ "n.s."
     ))  
   oplsda_vip$Compound <- factor(oplsda_vip$Metabolite, levels = oplsda_vip$Metabolite[order(oplsda_vip$VIP)])
@@ -568,7 +566,7 @@ data_oplsda <- oplsda_function(data_stat %>% column_to_rownames("Metabolite"), s
 
 #### Orthogonal Projections to Latent Structures Discriminant Analysis (OPLS-DA) (plotting)
 ```{r}
-plot_oplsda <- ggplot(data=data_oplsda[[1]], aes(x=p1*-1, y=o1, fill = Group))+
+plot_oplsda <- ggplot(data=data_oplsda[[1]], aes(x=p1, y=o1, fill = Group))+
 geom_point(size = 3, shape =21, stroke = 0.25)+
 scale_fill_manual(values=c('HG' = "#e95559ff", 'NG' = "#0088AA"))+
 xlab(paste("OPLS-DA axis 1 - ", data_oplsda[[3]], "%", sep=""))+
@@ -607,9 +605,12 @@ theme(panel.border = element_rect(size = 1, color = "black"),
 xlab("VIP score")+
 ggtitle("VIP plot") +
 theme(plot.title = element_blank()) +
-theme(legend.position = "top", legend.box.spacing = unit(0.5, 'mm'), 
+theme(legend.position = c(0.3, 2), 
+      legend.box.spacing = unit(0.5, 'mm'), 
       legend.title = element_blank(), 
-      legend.text = element_text(size = 8.5))
+      legend.text = element_text(size = 8.5))+
+guides(fill=guide_legend(nrow=1, byrow=TRUE))+
+theme(plot.margin = margin(10,1,1,1, "mm"))
 ```
 
 
@@ -726,15 +727,14 @@ bar_chart_fn <- function(data_statistics,
   pivot_longer(names_to = "Bioreplicate", values_to = "Intensity", -all_of(id_name)) %>% 
   left_join(conditions_data) %>% 
   group_by(!!as.symbol(id_name), Group) %>% 
-  summarise(mean = mean(2^Intensity), 
-            sd = sd(2^Intensity), 
+  summarise(mean = mean(2^Intensity, na.rm=T), 
+            sd = sd(2^Intensity, na.rm=T), 
             n = n(),
             sem = sd/sqrt(n),
             t.score = qt(p=0.05/2, 
             df=length(conditions$Bioreplicate),lower.tail=F), 
             ci = t.score * sd ) %>% 
   ungroup()
-
   # prepare data for plotting
   data_plot <- data_statistics %>% 
   left_join(numeric_data) %>% 
@@ -925,10 +925,10 @@ plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (HG/
   scale_x_continuous(limits = c(-0.85, 1.5)) +
   scale_y_continuous(limits = c(-0.85, 1.5)) +
   scale_shape_manual(values= c("+" = 24, "-" = 21))+
-  scale_fill_manual(values=c("Glycerophospholipids"        = "#0b5575ff", 
-                                    "Biogenic Amines"      = "#E69F00",      
-                                    "Sphingolipids"        = "#CC79A7",
-                                    "Aminoacids"           = "#009E73"))+
+  scale_fill_manual(values=c("Glycerophospholipids"        = "#6A3D9A", 
+                                    "Biogenic Amines"      = "#FB9A99",      
+                                    "Sphingolipids"        = "#E31A1C",
+                                    "Aminoacids"           = "#B2DF8A"))+
   theme_bw() + theme(panel.border = element_rect(size = 1), 
                panel.grid.major = element_line(), 
                panel.grid.minor = element_blank(),
@@ -958,6 +958,39 @@ plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (HG/
                  default.unit="inch", override.aes=list(shape=21)))
 ```
 
+
+
+
+
+
+
+
+#### variance importance in projection from OPLS-DA (plotting)
+```{r}
+plot_vip <- ggplot(data_oplsda[[2]] %>% 
+                  filter(VIP_sig == "+"), aes(x = VIP, y= Compound, fill = Regulation)) +
+geom_point(size = 3, shape = 21, stroke = 0.25) +
+theme_bw()+
+scale_fill_manual(values = c("#0088AA", "#e95559ff"))+
+theme(panel.border = element_rect(size = 1, color = "black"), 
+      panel.grid.major = element_line(), 
+      panel.grid.minor = element_blank(), 
+      panel.background = element_blank(),
+      axis.ticks = element_line(colour = "black"),
+                            axis.text.x = element_text(colour = "black", size = 9),
+                            axis.title.x = element_text(size= 9),
+                            axis.title.y = element_blank(),
+                            axis.text.y = element_text(size = 9, colour = "black"))+
+xlab("VIP score")+
+ggtitle("VIP plot") +
+theme(plot.title = element_blank()) +
+theme(legend.position = c(0.42, 1.097), 
+      legend.box.spacing = unit(0.5, 'mm'), 
+      legend.title = element_blank(), 
+      legend.text = element_text(size = 8.5))+
+guides(fill=guide_legend(nrow=1, byrow=TRUE))+
+theme(plot.margin = margin(12.7,1,1,1, "mm"))
+```
 
 ## save results
 
