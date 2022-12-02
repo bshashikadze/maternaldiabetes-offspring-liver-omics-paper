@@ -392,13 +392,14 @@ bar_chart_fn(data_statistics = anova_results %>%
             size = 3, 
             hjust = -1.5, 
             angle = 90,
-            vjust = -13.5, 
+            vjust = -15, 
             data = anova_results %>% 
             filter(`p-value group (HG/NG)`<= 0.1) %>% 
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   facet_wrap(~factor(Parameter, levels=c("Bilirubin (mg/dl)", "Albumin (g/dl)", 
                                          "NEFA (mmol/l)", "Glycerol (mmol/l)", "TG (mg/dl)", "ALT (U/l)")), scales = "free_y", ncol = 2)+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  theme(plot.margin = margin(1,1,2,-3, "mm"))
 ggsave("clinicalparameters.svg", width = 3.5, height = 5)
 ```
 
