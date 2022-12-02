@@ -152,7 +152,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
   }
 ```
 
-##### significance of metabolite changes with 2 way anova
+##### significance of clinical chemical parameter changes with 2 way anova
 
 although p-values will be adjusted with two_way_anova_fn, only row
 p-values will be used because these are separate/independent
@@ -260,7 +260,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
                rename(`THSD pair` = 2)) %>% 
-  arrange(filter_based)
+  arrange(desc(filter_based))
   
   
   # data for interaction plot
@@ -283,7 +283,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
 }
 ```
 
-##### THSD of metabolite interactions
+##### THSD of clinical chemical parameter interactions
 
 ``` r
 anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Parameter", numeric_data = data_stat, filter_based = "p-value group:sex", conditions_file = conditions)
@@ -317,6 +317,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
        panel.background = element_blank(), 
        axis.line = element_blank(),
   legend.position = "NONE") +
+  xlab("")+
   theme(axis.title = element_text(size = 10), 
         axis.text.x = element_text(size= 9, colour = "black", vjust = -0.1), 
         axis.ticks = element_line(colour = "black"),
@@ -462,7 +463,7 @@ ggsave("clinicalparameters.svg", width = 3.5, height = 5)
 ``` r
 if (!file.exists("Supplementary table 3.xlsx")) {
   
-# metabolomics data (all)
+# clinical chemical data (all)
 write.xlsx(as.data.frame(clinical_chem_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 1A", 
   col.names = TRUE, row.names = FALSE, append = T)
   
