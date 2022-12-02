@@ -856,11 +856,11 @@ plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>%
                             n_widht = 0.8, jitt_widht = 0.05,
                             id_name = "Metabolite", 
                             conditions_data = conditions)+
-          ylab("pmol/mg")+
-          geom_text(x = Inf, y = -Inf, 
-          aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
+            ylab("pmol/mg")+
+            geom_text(x = Inf, y = -Inf, 
+            aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
             size = 3, 
-            hjust = -3.85, 
+            hjust = -4.05, 
             angle = 90,
             vjust = -8.5, 
             data = anova_results_ratios %>% 
@@ -884,9 +884,9 @@ data_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
                             numeric_data = data_stat, n_widht = 0.75, jitt_widht = 0.1,
                             id_name = "Metabolite", 
                             conditions_data = conditions)+
-          ylab("pmol/mg")+
-          geom_text(x = Inf, y = -Inf, 
-          aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
+            ylab("pmol/mg")+
+            geom_text(x = Inf, y = -Inf, 
+            aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
             size = 3, 
             hjust = -1.14, 
             angle = 90,
@@ -985,7 +985,7 @@ ggsave("legend_gl_met.svg", width =2.8, height = 1)
 ``` r
 # download metabolomics results of MIDY vs WT 
 #Blutke, A., et al., The Munich MIDY Pig Biobank - A unique resource for studying organ crosstalk in diabetes. Molecular metabolism, 2017. #6(8): p. 931-940.
-url <- "https://ars.els-cdn.com/content/image/1-s2.0-S2212877817303150-mmc2.docx"
+url      <- "https://ars.els-cdn.com/content/image/1-s2.0-S2212877817303150-mmc2.docx"
 destfile <- "C:/Users/shashikadze/Documents/GitHub/maternaldiabetes-offspring-liver-omics-paper/metabolomics/MIDY_metabolomics_data.docx"
 download.file(url, destfile, quiet = TRUE, mode = "wb")
 
