@@ -229,7 +229,7 @@ anova_results_int <- anova_results %>%
 
 #### define functions that performs 2 way anova Tukey's honest significance difference (interaction significant proteins)
 ```{r}
-tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data) {
+tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data) {
   
   # prepare data
   data_tukey <- data %>% 
@@ -275,7 +275,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
                rename(`THSD pair` = 2)) %>% 
-  arrange(desc(filter_based))
+  arrange(desc(arrange_based))
   
   
   # data for interaction plot
@@ -301,7 +301,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
 
 ##### THSD of metabolite interactions
 ```{r}
-anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metabolite", numeric_data = data_stat, filter_based = "p-value group:sex", conditions_file = conditions)
+anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metabolite", numeric_data = data_stat, arrange_based = "p-value group:sex", conditions_file = conditions)
 ```
 
 
