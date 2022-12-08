@@ -136,18 +136,21 @@ l2fc_metabolites <- l2fc_group %>%
 ##### define functions that performs 2 way anova
 
 ``` r
-two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
+two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_adj_method, l2fc_data, add_l2fc) {
   
   data_anova  <- data %>% 
           pivot_longer(names_to = "Bioreplicate", 
-          values_to = "Intensity", -all_of(id_name)) %>% 
+          values_to = "Value", -all_of(id_name)) %>% 
           left_join(conditions_file) %>% 
-          drop_na(Intensity) %>% 
+          drop_na(Value) %>% 
           group_by(!!as.symbol(id_name)) %>% 
           summarise(`p-value` = 
-          summary(aov(Intensity ~ Group*Sex))[[1]][["Pr(>F)"]][1:3]) 
+          summary(aov(Value ~ Group*Sex))[[1]][["Pr(>F)"]][1:3]) 
+  
   # correct all resulting p-values (pool) for multiple hypothesis testing
-  data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = "BH")
+  if (adjust_p_value == TRUE) {
+    
+  data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = p_adj_method)
   # prepare empty data frame with proper comparisons
   anova_factors <- as.data.frame(rep(c("group (HG/NG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
   # rename column 
@@ -157,22 +160,37 @@ two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
   anova_results  <- as.data.frame(cbind(data_anova, anova_factors)) %>% 
   pivot_wider(names_from = Comparison, 
                           values_from = c(`p-value`, `Adjusted p-value`), all_of(id_name), names_sep = " ") 
-  
-  # add fold changes
-  if (exists("l2fc")) {
     
+  }
+  
+  if (adjust_p_value == FALSE) {
+  anova_factors <- as.data.frame(rep(c("p-value group (HG/NG)", "p-value sex (F/M)", 
+                                       "p-value group:sex"), length = nrow(data_anova)))
+  # rename column 
+  names(anova_factors) <- "Comparison"
+  
+  # final anova results
+  anova_results  <- as.data.frame(cbind(data_anova, anova_factors)) %>% 
+  pivot_wider(names_from = Comparison, 
+                          values_from = `p-value`, all_of(id_name), names_sep = " ") 
+    
+  }
+  # add fold changes
+  if (add_l2fc == TRUE) {
     anova_results  <- anova_results  %>% 
-       left_join(l2fc)
+       left_join(l2fc_data)
   }
   return(anova_results)
-  
   }
 ```
 
 ##### significance of metabolite changes with 2 way anova
 
 ``` r
-anova_results <- two_way_anova_fn(data = data_stat, id_name = "Metabolite", conditions_file = conditions, l2fc=l2fc_metabolites)
+anova_results <- two_way_anova_fn(data = data_stat, id_name = "Metabolite", 
+                                  conditions_file = conditions, 
+                                  p_adj_method = "BH", adjust_p_value = T,  
+                                  add_l2fc = T, l2fc=l2fc_metabolites)
 ```
 
     ## Joining, by = "Bioreplicate"
@@ -753,7 +771,9 @@ l2fc_ratios <- l2fc_group %>%
 ### perform anova
 
 ``` r
-anova_results_ratios <- two_way_anova_fn(data = data_stat_ratios, id_name = "Metabolite", conditions_file = conditions, l2fc = l2fc_ratios)
+anova_results_ratios <- two_way_anova_fn(data = data_stat_ratios, id_name = "Metabolite", 
+                                         conditions_file = conditions, adjust_p_value = T,  
+                                         p_adj_method = "BH", add_l2fc = T, l2fc = l2fc_ratios)
 ```
 
     ## Joining, by = "Bioreplicate"
@@ -796,20 +816,22 @@ anova_results_ratios_group <- anova_results_ratios %>%
 bar_chart_fn <- function(data_statistics, 
                          numeric_data,
                          conditions_data,
+                         point_size,
                          id_name,
                          n_widht,
-                         jitt_widht) {
+                         jitt_widht,
+                         strip_text_size) {
   
   
   # prepare data for error bar calculation
   error_bar <- data_statistics %>% 
   left_join(numeric_data) %>% 
   select(contains(colnames(numeric_data))) %>% 
-  pivot_longer(names_to = "Bioreplicate", values_to = "Intensity", -all_of(id_name)) %>% 
+  pivot_longer(names_to = "Bioreplicate", values_to = "Value", -all_of(id_name)) %>% 
   left_join(conditions_data) %>% 
   group_by(!!as.symbol(id_name), Group) %>% 
-  summarise(mean = mean(2^Intensity, na.rm=T), 
-            sd = sd(2^Intensity, na.rm=T), 
+  summarise(mean = mean(2^Value, na.rm=T), 
+            sd = sd(2^Value, na.rm=T), 
             n = n(),
             sem = sd/sqrt(n),
             t.score = qt(p=0.05/2, 
@@ -820,7 +842,7 @@ bar_chart_fn <- function(data_statistics,
   data_plot <- data_statistics %>% 
   left_join(numeric_data) %>% 
   select(contains(colnames(numeric_data))) %>%  
-  pivot_longer(names_to = "Bioreplicate", values_to = "Intensity", -all_of(id_name)) %>% 
+  pivot_longer(names_to = "Bioreplicate", values_to = "Value", -all_of(id_name)) %>% 
   left_join(conditions_data) %>% 
   ungroup() %>% 
     left_join(error_bar) 
@@ -830,10 +852,10 @@ bar_chart_fn <- function(data_statistics,
   
   
   # plot
-  plot_data <- ggplot(data_plot %>% mutate(Intensity = 2^Intensity), aes(x=Group, y=Intensity))+
-  geom_bar(stat = "summary", fun = mean, aes(fill = Group), alpha = 1, color = "black", lwd=0.5,
+  plot_data <- ggplot(data_plot %>% mutate(Value = 2^Value), aes(x=Group, y=Value))+
+  geom_bar(stat = "summary", fun = mean, aes(fill = Group), alpha = 1, color = "black", lwd=0.15,
            width=n_widht/length(unique(data_plot$Group))) + 
-  geom_jitter(size = 1.5,  fill = "grey", alpha = 0.8, shape = 21, width = jitt_widht)+
+  geom_jitter(size = point_size,  fill = "grey", alpha = 0.8, stroke =0.25, shape = 21, width = jitt_widht)+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                 position=position_dodge(0.05)) +
   scale_fill_manual(values=c('NG' = "#0088AA", 'HG' = "#e95559ff")) +
@@ -846,13 +868,14 @@ bar_chart_fn <- function(data_statistics,
         legend.box.spacing = unit(0.8, 'mm'), 
         legend.title = element_blank(), 
         legend.text = element_text(size = 8))+
-  theme(strip.text.y = element_text(size = 9), 
+  theme(strip.text = element_text(size = strip_text_size),
         strip.background = element_blank(),
         legend.margin=margin(0,0,0,0), 
         legend.box.margin=margin(-12,-12,-3,-12)) 
   
   
   return(plot_data)
+ 
  
 }
 ```
@@ -862,9 +885,12 @@ bar_chart_fn <- function(data_statistics,
 ``` r
 # plot ratios
 plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>% 
-                              filter(`Adjusted p-value group (HG/NG)` <=0.05),
-                            numeric_data = data_stat_ratios,
-                            n_widht = 0.8, jitt_widht = 0.05,
+                              filter(`Adjusted p-value group (HG/NG)` <= 0.05),
+                            numeric_data = data_stat_ratios, 
+                            point_size = 2, 
+                            strip_text_size = 9,
+                            n_widht = 0.8, 
+                            jitt_widht = 0.05,
                             id_name = "Metabolite", 
                             conditions_data = conditions)+
             ylab("pmol/mg")+
@@ -892,7 +918,10 @@ plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>%
 ``` r
 # plot significant metabolites (Glycerophospholipids will be plotted as heatmap)
 data_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(Class != "Glycerophospholipids"), 
-                            numeric_data = data_stat, n_widht = 0.75, jitt_widht = 0.1,
+                            numeric_data = data_stat, n_widht = 0.75, 
+                            jitt_widht = 0.1,  
+                            point_size = 2, 
+                            strip_text_size = 9,
                             id_name = "Metabolite", 
                             conditions_data = conditions)+
             ylab("pmol/mg")+
