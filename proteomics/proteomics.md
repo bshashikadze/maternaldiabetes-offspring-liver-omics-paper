@@ -297,7 +297,7 @@ system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_fi
 ```
 
     ##    user  system elapsed 
-    ## 1831.11    5.00 1838.47
+    ## 1511.91    2.72 1514.94
 
 #### save imputed protein groups data
 
@@ -410,18 +410,21 @@ l2fc_genes <- l2fc_group %>%
 ##### define functions that performs 2 way anova
 
 ``` r
-two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
+two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_adj_method, l2fc_data, add_l2fc) {
   
   data_anova  <- data %>% 
           pivot_longer(names_to = "Bioreplicate", 
-          values_to = "Intensity", -all_of(id_name)) %>% 
+          values_to = "Value", -all_of(id_name)) %>% 
           left_join(conditions_file) %>% 
-          drop_na(Intensity) %>% 
+          drop_na(Value) %>% 
           group_by(!!as.symbol(id_name)) %>% 
           summarise(`p-value` = 
-          summary(aov(Intensity ~ Group*Sex))[[1]][["Pr(>F)"]][1:3]) 
+          summary(aov(Value ~ Group*Sex))[[1]][["Pr(>F)"]][1:3]) 
+  
   # correct all resulting p-values (pool) for multiple hypothesis testing
-  data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = "BH")
+  if (adjust_p_value == TRUE) {
+    
+  data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = p_adj_method)
   # prepare empty data frame with proper comparisons
   anova_factors <- as.data.frame(rep(c("group (HG/NG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
   # rename column 
@@ -431,22 +434,39 @@ two_way_anova_fn <- function(data, id_name, conditions_file, l2fc) {
   anova_results  <- as.data.frame(cbind(data_anova, anova_factors)) %>% 
   pivot_wider(names_from = Comparison, 
                           values_from = c(`p-value`, `Adjusted p-value`), all_of(id_name), names_sep = " ") 
-  
-  # add fold changes
-  if (exists("l2fc")) {
     
+  }
+  
+  if (adjust_p_value == FALSE) {
+  anova_factors <- as.data.frame(rep(c("p-value group (HG/NG)", "p-value sex (F/M)", 
+                                       "p-value group:sex"), length = nrow(data_anova)))
+  # rename column 
+  names(anova_factors) <- "Comparison"
+  
+  # final anova results
+  anova_results  <- as.data.frame(cbind(data_anova, anova_factors)) %>% 
+  pivot_wider(names_from = Comparison, 
+                          values_from = `p-value`, all_of(id_name), names_sep = " ") 
+    
+  }
+  # add fold changes
+  if (add_l2fc == TRUE) {
     anova_results  <- anova_results  %>% 
-       left_join(l2fc)
+       left_join(l2fc_data)
   }
   return(anova_results)
-  
   }
 ```
 
 ##### significance of protein changes with 2 way anova
 
 ``` r
-anova_results <- two_way_anova_fn(data = data_stat, id_name = "Genes", conditions_file = conditions, l2fc=l2fc_genes)
+anova_results <- two_way_anova_fn(data = data_stat, id_name = "Genes",                                  
+                                  adjust_p_value = T,
+                                  p_adj_method = "BH",
+                                  add_l2fc = T,
+                                  conditions_file = conditions, 
+                                  l2fc=l2fc_genes)
 ```
 
     ## Joining, by = "Bioreplicate"
@@ -504,7 +524,7 @@ anova_results_int <- anova_results %>%
 #### define functions that performs 2 way anova Tukey’s honest significance difference (interaction significant proteins)
 
 ``` r
-tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data) {
+tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data) {
   
   # prepare data
   data_tukey <- data %>% 
@@ -550,7 +570,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
                rename(`THSD pair` = 2)) %>% 
-  arrange(desc(filter_based))
+  arrange(desc(arrange_based))
   
   
   # data for interaction plot
@@ -578,7 +598,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, filter_based, numeric_data)
 ``` r
 anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Genes", 
                                   numeric_data = data_stat, 
-                                  filter_based = "Adjusted p-value group:sex", conditions_file = conditions)
+                                  arrange_based = "Adjusted p-value group:sex", conditions_file = conditions)
 ```
 
     ## Joining, by = "Genes"
