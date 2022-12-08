@@ -154,12 +154,11 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
 
 
 ##### significance of clinical chemical parameter changes with 2 way anova
-although p-values will be adjusted with two_way_anova_fn, only row p-values will be used because these are separate/independent measurements and multiple testing should not be an issue
+only row p-values will be used because these are separate/independent measurements and multiple testing should not be an issue
 ```{r}
 anova_results <- two_way_anova_fn(data = data_stat, id_name = "Parameter", 
                                   conditions_file = conditions, 
-                                  adjust_p_value = T,
-                                  p_adj_method = "BH",
+                                  adjust_p_value = F,
                                   add_l2fc = T,
                                   l2fc=l2fc_parameters)
 ```
