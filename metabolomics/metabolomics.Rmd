@@ -627,15 +627,16 @@ theme(panel.border = element_rect(size = 1, color = "black"),
                             axis.title.x = element_text(size= 9),
                             axis.title.y = element_blank(),
                             axis.text.y = element_text(size = 9, colour = "black"))+
+scale_x_continuous(breaks = c(1.5, 1.85,  2.2))+
 xlab("VIP score")+
 ggtitle("VIP plot") +
 theme(plot.title = element_blank()) +
-theme(legend.position = c(0.3, 2), 
+theme(legend.position = c(0.5, 1.1), 
       legend.box.spacing = unit(0.5, 'mm'), 
       legend.title = element_blank(), 
       legend.text = element_text(size = 8.5))+
 guides(fill=guide_legend(nrow=1, byrow=TRUE))+
-theme(plot.margin = margin(10,1,1,1, "mm"))
+theme(plot.margin = margin(12.1,2,1,1, "mm"))
 ```
 
 
@@ -863,7 +864,7 @@ data_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
                                           'ADMA')), scales = "free_y", ncol = 3)+
   theme(legend.position = c(0.7, 0.1))+
   guides(fill=guide_legend(nrow=1, byrow=TRUE))+
-  theme(plot.margin = margin(1,1,-5,3, "mm"))
+  theme(plot.margin = margin(1,2,-5,3, "mm"))
 ```
 
 
@@ -995,33 +996,6 @@ plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (HG/
                  default.unit="inch", override.aes=list(shape=21)))
 ```
 
-
-#### variance importance in projection from OPLS-DA (plotting)
-```{r}
-plot_vip <- ggplot(data_oplsda[[2]] %>% 
-                  filter(VIP_sig == "+"), aes(x = VIP, y= Compound, fill = Regulation)) +
-geom_point(size = 3, shape = 21, stroke = 0.25) +
-theme_bw()+
-scale_fill_manual(values = c("#0088AA", "#e95559ff"))+
-theme(panel.border = element_rect(size = 1, color = "black"), 
-      panel.grid.major = element_line(), 
-      panel.grid.minor = element_blank(), 
-      panel.background = element_blank(),
-      axis.ticks = element_line(colour = "black"),
-                            axis.text.x = element_text(colour = "black", size = 9),
-                            axis.title.x = element_text(size= 9),
-                            axis.title.y = element_blank(),
-                            axis.text.y = element_text(size = 9, colour = "black"))+
-xlab("VIP score")+
-ggtitle("VIP plot") +
-theme(plot.title = element_blank()) +
-theme(legend.position = c(0.42, 1.097), 
-      legend.box.spacing = unit(0.5, 'mm'), 
-      legend.title = element_blank(), 
-      legend.text = element_text(size = 8.5))+
-guides(fill=guide_legend(nrow=1, byrow=TRUE))+
-theme(plot.margin = margin(12.7,1,1,1, "mm"))
-```
 
 ## save results
 
