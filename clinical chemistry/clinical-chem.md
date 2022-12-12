@@ -487,23 +487,23 @@ ggsave("clinicalparameters.svg", width = 3.5, height = 5)
 if (!file.exists("Supplementary table 3.xlsx")) {
   
 # clinical chemical data (all)
-write.xlsx(as.data.frame(clinical_chem_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 1A", 
+write.xlsx(as.data.frame(clinical_chem_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3A", 
   col.names = TRUE, row.names = FALSE, append = T)
   
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 1B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 1C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 1D", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 1E", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3E", 
   col.names = TRUE, row.names = FALSE, append = T)
 }
 ```
