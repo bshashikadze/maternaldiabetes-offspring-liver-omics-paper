@@ -825,21 +825,24 @@ plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>%
             geom_text(x = Inf, y = -Inf, 
             aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
             size = 3, 
-            hjust = -4.05, 
+            hjust = -1.55, 
             angle = 90,
-            vjust = -8.5, 
+            vjust = -0.6, 
             data = anova_results_ratios %>% 
             filter(`Adjusted p-value group (HG/NG)` <= 0.05)  %>% 
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   facet_wrap(~factor(Metabolite, levels=c('Total PC ae','PUFA (PC) / MUFA (PC)','Total SM')), scales = "free_y", ncol = 3)+
-  theme(legend.position = "bottom")
+  theme(legend.position = c(0.5, -0.31))+
+  guides(fill=guide_legend(nrow=1, byrow=TRUE))+
+  theme(plot.margin = margin(1,2,-5,3, "mm"))
 
 
 
 
 # plot significant metabolites (Glycerophospholipids will be plotted as heatmap)
-data_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(Class != "Glycerophospholipids"), 
-                            numeric_data = data_stat, n_widht = 0.75, 
+plot_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(Class != "Glycerophospholipids" &
+                                                                                Class != "Sphingolipids"), 
+                            numeric_data = data_stat, n_widht = 0.95, 
                             jitt_widht = 0.1,  
                             point_size = 2, 
                             strip_text_size = 9,
@@ -849,30 +852,57 @@ data_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
             geom_text(x = Inf, y = -Inf, 
             aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
             size = 3, 
-            hjust = -1.14, 
+            hjust = -1.65, 
             angle = 90,
-            vjust = -9, 
+            vjust = -0.6, 
             data = anova_results_group %>% 
-            filter(Class != "Glycerophospholipids")  %>% 
+            filter(Class != "Glycerophospholipids" & Class != "Sphingolipids")  %>% 
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
             facet_wrap(~factor(Metabolite, levels=c('Pro',
-                                          'SM (OH) C14:1',
-                                          'SM (OH) C16:1',
                                           't4-OH-Pro', 
                                           'total DMA',
                                           'SDMA',
                                           'ADMA')), scales = "free_y", ncol = 3)+
-  theme(legend.position = c(0.7, 0.1))+
-  guides(fill=guide_legend(nrow=1, byrow=TRUE))+
+  theme(legend.position = c(0.85, 0.2))+
+  guides(fill=guide_legend(nrow=2, byrow=TRUE))+
   theme(plot.margin = margin(1,2,-5,3, "mm"))
 ```
 
 
 ### plot Glycerophospholipids as a heatmap
 ```{r}
+# make row annotations
+  # make row annotation
+  stars_data <- rownames(data_HM %>% 
+                            filter(rownames(data_HM) %in% anova_results_group$Metabolite[anova_results_group$Class == "Glycerophospholipids" |anova_results_group$Class == "Sphingolipids"])) %>% 
+    as.data.frame() %>% 
+    rename(Metabolite = 1) %>% 
+    left_join(anova_results_group) %>% 
+    select(1,5) %>% 
+    column_to_rownames("Metabolite") %>% 
+    rename(adj_p_value = `Adjusted p-value group (HG/NG)`) %>% 
+    mutate(padj_star = case_when(adj_p_value < 0.001 &  adj_p_value >  0     ~ "***",
+                         adj_p_value < 0.01         &  adj_p_value >  0.001 ~ "**",
+                         adj_p_value < 0.05         &  adj_p_value >  0.01  ~ "*",
+                         adj_p_value > 0.05                          ~ ""))
+  
+  
+    FDR = stars_data$adj_p_value
+    is_sig = FDR < 0.05
+    pch = stars_data$padj_star
+    pch[!is_sig] = NA
+    
+    # color mapping for -log10(pvalue)
+    pvalue_col_fun = colorRamp2(c(0, 2, 3), c("white", "white", "white")) 
+
+
+    row_ann = HeatmapAnnotation(which = 'row', annotation_name_gp   = gpar(fontsize = 0),
+    FDR = anno_simple(-log10(FDR), col = pvalue_col_fun, pch = pch))
+    
+    
 # plotting
 hmap_gl <- Heatmap(as.matrix(data_HM %>% 
-                            filter(rownames(data_HM) %in% anova_results_group$Metabolite[anova_results_group$Class == "Glycerophospholipids"])),
+                            filter(rownames(data_HM) %in% anova_results_group$Metabolite[anova_results_group$Class == "Glycerophospholipids" |anova_results_group$Class == "Sphingolipids"])),
                 show_heatmap_legend        = F,
                 row_dend_width             = unit(0.5, "cm"),
                 column_dend_height         = unit(0.5, "cm"),
@@ -888,12 +918,13 @@ hmap_gl <- Heatmap(as.matrix(data_HM %>%
                 clustering_method_columns   = "ward.D",
                 use_raster = F,
                 top_annotation              = hmap_all_data[[3]],
-                width                       = unit(2.1, "in"),
+                right_annotation            = row_ann,
+                width                       = unit(1.8, "in"),
                 height                      = unit(3.135, "in"), 
                 col                         = hmap_all_data[[1]], 
                 border                      = TRUE,
                 column_names_gp             = gpar(fontsize = 8),
-                row_names_gp             = gpar(fontsize = 8)) 
+                row_names_gp                = gpar(fontsize = 8)) 
 
 ht_gl <- draw(hmap_gl)
 
@@ -967,8 +998,9 @@ plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (HG/
                                     "Biogenic Amines"      = "#FB9A99",      
                                     "Sphingolipids"        = "#E31A1C",
                                     "Aminoacids"           = "#B2DF8A"))+
-  theme_bw() + theme(panel.border = element_rect(size = 1), 
+  theme_bw() + theme(panel.border = element_rect(size = 1, color = "black"), 
                panel.grid.major = element_line(), 
+               axis.ticks = element_line(color = "black"),
                panel.grid.minor = element_blank(),
                panel.background = element_blank(), 
                axis.line = element_blank(), 
@@ -1012,19 +1044,19 @@ plot_5 <- plot_grid(plot_oplsda, plot_vip, ncol = 2, rel_widths = c(7.1/2, 7.1/2
 plot_6 <- plot_grid(plot_4, plot_5, nrow = 2, rel_widths = c(w1+7.1-w1, w1+7.1-w1), rel_heights = c(h1+0.5+(5.82-h1), 3.35))
 ggsave("metabolomics_main.svg", width = 7.1, height = h1+0.5+(5.82-h1)+3.35)
 ```
-
-
 #### metabolomics figure 2
 ```{r}
-p2 <-   plot_grid(p0, plot_Hmap_gl, p0, rel_widths = c(1,1,1), rel_heights = c(0.05, 3.9, 0.15), ncol = 1)
-p3 <-   plot_grid(p2, data_other_sig, labels = c("A", "B"), rel_widths = c(3.1, 4), rel_heights = c(1,1), label_size = 17)
+p1 <-   plot_grid(p0, plot_Hmap_gl, p0, rel_widths = c(1,1,1), rel_heights = c(0.05, 3.9, 0.11), ncol = 1)
+p2 <-   plot_grid(p0, plot_ratios, rel_widths = c(1,1), rel_heights = c(1.5, 1), ncol = 1, labels = c("", "C"), label_size = 17)
+p3 <-   plot_grid(p1, p2, labels = c("A", "B"), rel_widths = c(w1_gl, 7.1-w1_gl), rel_heights = c(1,1), label_size = 17)
 p4 <-   plot_grid(p3, p0, rel_widths = c(1,1), rel_heights = c(4.1,0.3), nrow = 2, label_size = 17)
-p5 <-   plot_grid(plot_ratios, p0, nrow = 2, rel_widths = c(1,1), rel_heights = c(3.7,0.3), labels = c("C"), label_size = 17)
-p6 <-   plot_grid(p0, plot_corr, nrow = 2, rel_widths = c(1,1), rel_heights = c(0.285,3.715), labels = c("D"), label_size = 17)
+p5 <-   plot_grid(plot_other_sig, p0, nrow = 2, rel_widths = c(1,1), rel_heights = c(3.8,0.12), labels = c("D"), label_size = 17)
+p6 <-   plot_grid(p0, plot_corr, nrow = 2, rel_widths = c(1,1), rel_heights = c(0.24,3.76), labels = c("E"), label_size = 17)
 p7 <-   plot_grid(p5, p6, rel_widths = c(3.7,3.4), rel_heights = c(1,1))
 plot_grid(p4, p7, nrow = 2, rel_widths = c(1,1), rel_heights = c(4.5, 3.5))
 ggsave("metabolomics_figure_2.svg", width = 7.1, height = 7.9)
 ```
+
 
 
 ### save data in a supplementary tables
