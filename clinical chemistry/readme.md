@@ -4,7 +4,7 @@ visualization
 BS
 01/12/2022
 
-Dataset required for this script can be found at:
+Datasets required for this script can be found at:
 1. clinical_chem_data - online supplementary tables, supplementary table 3 (sheet 1)
 2. [Conditions file](https://github.com/bshashikadze/maternaldiabetes-offspring-liver-omics-paper/blob/main/clinical%20chemistry/Conditions.txt) (with information about samples and groups)
 
