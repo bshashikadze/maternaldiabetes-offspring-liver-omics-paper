@@ -3,6 +3,9 @@ statistical analysis of proteomics data and visualization
 BS
 23/11/2022
 
+Dataset required for this script can be found at:
+1. Liver_DIA_precursors_3d_old.tsv - can be downloaded from PRIDE repository (dataset ID - )
+
 ## load libraries
 
 ``` r
