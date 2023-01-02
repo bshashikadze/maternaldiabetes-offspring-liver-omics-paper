@@ -32,7 +32,6 @@ library        (ggpubr)
 dir.create("input")
 ```
 
-    ## Warning in dir.create("input"): 'input' already exists
 
 ### load files and tidy
 
