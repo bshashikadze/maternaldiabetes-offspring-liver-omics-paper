@@ -5,6 +5,7 @@ BS
 
 Dataset required for this script can be found at:
 1. Liver_DIA_precursors_3d_old.tsv - can be downloaded from PRIDE repository (dataset ID - )
+2. [Conditions file](https://github.com/bshashikadze/maternaldiabetes-offspring-liver-omics-paper/blob/main/proteomics/Conditions.txt) (with information about samples and groups)
 
 ## load libraries
 
