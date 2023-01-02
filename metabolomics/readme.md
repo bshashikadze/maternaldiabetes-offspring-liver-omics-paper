@@ -5,7 +5,7 @@ BS
 
 Dataset required for this script can be found at:
 1. metabolomics_data - online supplementary tables, supplementary table 2 (sheet 1)
-2. [Conditions file](https://github.com/bshashikadze/maternaldiabetes-offspring-liver-omics-paper/blob/main/proteomics/Conditions.txt) (with information about samples and groups)
+2. [Conditions file](https://github.com/bshashikadze/maternaldiabetes-offspring-liver-omics-paper/blob/main/metabolomics/Conditions.txt) (with information about samples and groups)
 
 ## load libraries
 
