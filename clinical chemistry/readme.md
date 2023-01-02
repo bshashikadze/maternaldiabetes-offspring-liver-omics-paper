@@ -93,9 +93,6 @@ l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditio
                           compared_to  = "F", values_log  = T, id_name = "Parameter")
 ```
 
-    ## Joining, by = "Bioreplicate"
-    ## `summarise()` has grouped output by 'Parameter'. You can override using the
-    ## `.groups` argument.
 
     ## positive fold change means up in F
 
