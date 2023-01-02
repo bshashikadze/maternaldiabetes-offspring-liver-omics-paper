@@ -16,8 +16,6 @@ library(ropls)
 library(xlsx)
 ```
 
-    ## Warning: package 'xlsx' was built under R version 4.2.2
-
 ## load data
 
 ``` r
