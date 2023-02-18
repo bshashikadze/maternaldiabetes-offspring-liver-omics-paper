@@ -1,13 +1,12 @@
 statistical analysis of proteomics data and visualization
 ================
 BS
-23/11/2022
+18/02/2023
 
 ## load libraries
 
 ``` r
 library(tidyverse)
-library(randomForest)
 library(missForest)
 library(ggrepel)
 library(ComplexHeatmap)
@@ -17,201 +16,118 @@ library(cowplot)
 library(WebGestaltR)
 library(ggpubr)
 library(xlsx)
+library(pepquantify)
+library(seqinr)
+library(biomartr)
+library(protti)
 ```
 
-## Convert precursor data to protein data
+## Convert precursor data to protein and peptide data (pepquantify package)
 
-### load data (DIA-NN main output)
+### read the main output of DIA-NN
+
+implicit reading is necessary only if any modifications other than
+supported by pepquantify package is necessary, e.g. filtering for
+contaminants
 
 ``` r
-precursors_diann_3d_old <- read.delim("Liver_DIA_precursors_3d_old.tsv", sep = "\t", header = T) 
+raw_diann <- read.delim("Liver_DIA_precursors_piglets_3d_old.tsv", sep = "\t", header = T) #can be downloaded from github
 ```
 
-### data filtering
-
-filter for significance, signal quality, contaminants, unique peptides
-adapted from:
-<https://github.com/bshashikadze/diabetic_lung_proteomics_lipidomics/blob/main/DIA-NN%20quant%20with%20msempire/DIA-NN%20quant%20with%20msempire.Rmd>
+### remove contaminants (contaminants fasta file from MaxQuant common contaminants)
 
 ``` r
-diann_cleanup_function <- function(data, Q_Val, Global_Q_Val, Global_PG_Q_Val, Lib_Q_Val, Lib_PG_Q_Val, 
-                                   experimental_library, unique_peptides_only, Quant.Qual, remove_contaminants) {
-  
-  # experimental library based analysis (e.g. GPF)
-  if (experimental_library == T) {
-  data <- data %>% 
-  dplyr::filter(Q.Value           <= Q_Val) %>% 
-  dplyr::filter(Global.Q.Value    <= Global_Q_Val) %>%
-  dplyr::filter(Global.PG.Q.Value <= Global_PG_Q_Val)
-  }
-  
-  # library free analysis (with mbr enabled)
-  else {
-    data <- data %>% 
-    dplyr::filter(Q.Value         <= Q_Val)%>%
-    dplyr::filter(Lib.Q.Value     <= Lib_Q_Val) %>% 
-    dplyr::filter(Lib.PG.Q.Value  <= Lib_PG_Q_Val)
-  }
-  
-  # filter for unique peptides and signal quality
-  if (unique_peptides_only == TRUE) {
-    unique <- 1
-    }
-  else {unique <- 0}
-  
-   data <- data %>%
-   dplyr::filter(Proteotypic      >= unique) %>% 
-   dplyr::filter(Quantity.Quality >= Quant.Qual) 
-  
-  # removing contaminant entries (according to maxquant common contaminants fasta file, which can be included during DIA-NN search)
-   if (remove_contaminants == TRUE) {
-  require(seqinr)
-  contamintants           <- seqinr::read.fasta("contaminants.fasta")
-  contaminant.names       <- seqinr::getName(contamintants) 
-  data <- data %>%
-  dplyr::filter(!stringr::str_detect(Protein.Group, stringr::str_c(contaminant.names, collapse="|")))
-   return(data)
-  }
-  else {return(data)}
-  }
+contamintants           <- read.fasta("contaminants.fasta")
+contaminant.names       <- getName(contamintants) 
+raw_diann_filtered      <- raw_diann %>% 
+  filter(!str_detect(Protein.Group, str_c(contaminant.names, collapse="|")))
 
-# apply function on the data
-data_filtered <- diann_cleanup_function(precursors_diann_3d_old, 
-                                        Q_Val = 0.01, 
-                                        Global_Q_Val = 0.01, 
-                                        Global_PG_Q_Val = 0.01, 
-                                        Lib_Q_Val = 0.01, 
-                                        Lib_PG_Q_Val = 0.01, 
-                                        experimental_library = T, 
-                                        unique_peptides_only = TRUE, 
-                                        Quant.Qual = 0.5, 
-                                        remove_contaminants = T)
+# save contaminants-removed data
+write.table(raw_diann_filtered, "DIA_precursors_nocontaminants.tsv", quote = F, sep = "\t", row.names = F)
 ```
 
-### from precursor to peptide, from peptide to protein
-
-adapted from:
-<https://github.com/bshashikadze/diabetic_lung_proteomics_lipidomics/blob/main/DIA-NN%20quant%20with%20msempire/DIA-NN%20quant%20with%20msempire.Rmd>
+### load data using pepquantify (performs filtering and writes filtered output, peptides and protein groups files)
 
 ``` r
-precursor_to_protein_function <- function(data, id_column, second_id_column, quantity_column, sum_charge){
-
-  input   <- data
-  results <- list()
-  
-  # subset for necessary columns
-  data <- data %>% 
-  dplyr::select("Precursor.Quantity", "Precursor.Normalised", "Run", all_of(quantity_column),
-                "Stripped.Sequence", all_of(id_column)) 
-  
-  # aggregate charge states
-  data_peptide <- data %>% 
-  dplyr::select(-all_of(quantity_column)) 
-        
-    if (sum_charge == TRUE) {
-  # summerise charge states by taking the sum
-  data_peptide <- data_peptide %>% 
-  dplyr::group_by(Run, Stripped.Sequence, !!as.symbol(id_column)) %>% 
-  dplyr::summarise_all(sum, na.rm = TRUE) %>% 
-  dplyr::ungroup()
-      }
-    else {
-   
-  # aggregate charge states by taking the precursor with the highest intensity  
-  data_peptide <- data_peptide %>%
-  dplyr::group_by(Run, Stripped.Sequence, !!as.symbol(id_column)) %>% 
-  dplyr::summarise(Precursor.Quantity  = max(Precursor.Quantity), 
-                   Precursor.Normalised = max(Precursor.Normalised)) %>% 
-  dplyr::ungroup()
-      }
- 
-  # from long to wide also import additional columns from the original data 
-  data_peptide <- data_peptide %>% 
-  tidyr::pivot_wider(names_from = "Run", 
-                  values_from = c("Precursor.Quantity", "Precursor.Normalised"), 
-                  c(all_of(id_column), "Stripped.Sequence"))
-
-  data_peptide$peptide_q_value   <- input$Global.Q.Value[match(data_peptide[[id_column]], input[[id_column]])]
-    
-    
-  # re-order
-  data_peptide <- data_peptide %>% 
-  dplyr::select(all_of(id_column), Stripped.Sequence,
-                    starts_with("Precursor.Quantity"), starts_with("Precursor.Quantity"), 
-                    starts_with("Precursor.Normalised"), peptide_q_value) 
-    
-  # remove entries without gene names
-  if ("Genes" %in% colnames(data_peptide)) {
-    data_peptide      <- data_peptide[data_peptide$Genes != "", ] 
-  }
-   
-  # write results
-  write.table(data_peptide, "peptides.txt", row.names = F, sep = "\t") 
-  
-  # protein level data
-  data_pg <- data %>% 
-  dplyr::select(Run, all_of(id_column), all_of(quantity_column)) %>%
-  dplyr::distinct(Run, !!as.symbol(id_column), .keep_all = T) %>% 
-  dplyr::mutate(Run = str_c("LFQ.intensity_", Run)) %>% 
-  tidyr::pivot_wider(names_from = "Run", values_from = all_of(quantity_column), all_of(id_column))
-  
-  # count number of peptides
-  n_pep <- data_peptide %>% 
-    dplyr::group_by(!!as.symbol(id_column)) %>% 
-    dplyr::summarise(n_pep = n_distinct(Stripped.Sequence)) 
-  
-  # match other columns
-  n_pep$pg_Q_Val <- input$Global.PG.Q.Value[match(n_pep[[id_column]], input[[id_column]])]
-
-  
-  # get unique protein descriptions (distinct protein names for the same genes will be aggregated in one row separated by semicolon)
-  protein_description <- input %>% 
-  dplyr::select(!!as.symbol(id_column), First.Protein.Description) %>% 
-  dplyr::distinct(!!as.symbol(id_column), First.Protein.Description, .keep_all = T) %>% 
-  dplyr::group_by(!!as.symbol(id_column)) %>% 
-  dplyr::summarize(First.Protein.Description=paste(First.Protein.Description,collapse=";")) %>% 
-  dplyr::ungroup()
-
-
-  # get unique protein descriptions (distinct protein names for the same genes will be aggregated in one row separated by semicolon)
-  second_id <- input %>% 
-  dplyr::select(!!as.symbol(id_column), !!as.symbol(second_id_column)) %>% 
-  dplyr::distinct(!!as.symbol(id_column), !!as.symbol(second_id_column), .keep_all = T) %>%
-  group_by(!!as.symbol(id_column)) %>% 
-  dplyr::summarize(second_id =paste(!!as.symbol(second_id_column), collapse=";")) %>% 
-  dplyr::ungroup()
-  
-  combined_additional <- protein_description %>% 
-    dplyr::left_join(second_id)
-  
-  
-  # remove entries without gene names
-  if ("Genes" %in% colnames(data_peptide)) {
-    data_pg      <- data_pg[data_pg$Genes != "", ] 
-    }
-
-  # join number of peptides and q-values
-   data_pg <- data_pg %>% 
-     dplyr::left_join(n_pep) %>% 
-     left_join(combined_additional) 
-  
-  # write results
-  write.table(data_pg, "proteingroups.txt", row.names = F, sep = "\t") 
-  
-  results[[1]] <- data_peptide
-  results[[2]] <- data_pg
-
-  return(results)}
-
-# apply function on the data
-peptide_and_pg_data <- precursor_to_protein_function(data_filtered, 
-                                                 id_column = "Genes", 
-                                                 second_id_column="Protein.Group", 
-                                                 quantity_column = "Genes.MaxLFQ.Unique", 
-                                                 sum_charge = TRUE)
-
-rm(data_filtered, precursors_diann_3d_old, precursor_to_protein_function, diann_cleanup_function)
+precursors_diann_3d_old <- pepquantify::read_diann(Q_Val = 0.01, 
+                                                   diann_file_name = "DIA_precursors_nocontaminants.tsv",
+                                                   Global_Q_Val = 0.01, 
+                                                   Global_PG_Q_Val = 0.01, 
+                                                   experimental_library = T, 
+                                                   unique_peptides_only = TRUE, 
+                                                   Quant_Qual = 0.5, 
+                                                   include_mod_in_pepreport = T,
+                                                   save_supplementary = T,
+                                                   for_msempire = F, 
+                                                   id_column = "Genes",
+                                                   second_id_column = "Protein.Group", 
+                                                   quantity_column = "Genes.MaxLFQ.Unique")
 ```
+
+    ## [1] "R is located in C:/Users/shashikadze/Documents/GitHub/maternaldiabetes-offspring-liver-omics-paper/proteomics, if this path is wrong, change it from R studio, or by specifying the correct path using the directory command e.g. directory = name_of_the_path"
+    ## [1] "file, with the name DIA_precursors_nocontaminants.tsv is currently loading"
+    ## [1] "in the peptide output modifications will be included (so far (v.2.1.2) only works for Carbamidomethyl(C))"
+
+    ## Joining, by = "Genes"
+    ## Joining, by = "Stripped.Sequence"
+    ## Joining, by = "Stripped.Sequence"
+    ## Joining, by = "Stripped.Sequence"
+    ## Joining, by = "Stripped.Sequence"
+    ## Joining, by = "Genes"
+    ## Joining, by = "Genes"
+
+    ## the following files were saved in the txt folder:
+    ##     1 - diann_output_filtered;
+    ##     2 - peptides;
+    ##     3 - proteingroups.
+
+``` r
+rm(raw_diann, raw_diann_filtered)
+```
+
+## calculate sequence coverage using protti R package
+
+``` r
+# read uniprot fasta file which was used during DIA-NN search
+fasta_file <- read_proteome("uniprot-proteome_UP000008227_20012022_49792_1438.fasta", obj.type = "Biostrings")
+
+# convert fasta file to a dataframe
+fasta_df <- as.data.frame(fasta_file) %>% 
+            tibble::rownames_to_column("name") %>% 
+            dplyr::rename(sequence = x)
+rm(fasta_file)
+
+# list of identified proteins (only first accession)
+seq_cov_data <- precursors_diann_3d_old[[1]] %>%
+  select(Stripped.Sequence, Protein.Group) %>% 
+  mutate(first_protein = str_remove(Protein.Group, ";.*")) 
+
+# prepare fasta file to match proteins and get the sequence 
+# protein name in uniprot fasta file is between two vertical lines, following extracts proteins in a new column from each entry
+fasta_df <- fasta_df %>%
+   mutate(protein = str_extract_all(name,"(?<=\\|).+(?=\\|)")) %>% 
+   mutate(protein = as.character(protein))
+
+# add full protein sequence to each identified protein 
+seq_cov_data <- seq_cov_data %>% 
+  left_join(fasta_df %>% select(sequence, protein), by = c("first_protein" = "protein")) %>% 
+  select(Stripped.Sequence, sequence)
+
+# calculate sequence coverage using protti package
+seq_cov <- calculate_sequence_coverage(
+  seq_cov_data,
+  protein_sequence = sequence,
+  peptides = Stripped.Sequence)
+
+# retain max seq coverage for each gene
+seq_cov <- seq_cov %>% 
+  left_join(precursors_diann_3d_old[[1]] %>% select(Stripped.Sequence, Protein.Group, Genes)) %>% 
+  select(coverage, Genes) %>% 
+  group_by(Genes) %>%
+  summarise(coverage = max(coverage))
+```
+
+    ## Joining, by = "Stripped.Sequence"
 
 ## load conditions file
 
@@ -225,24 +141,31 @@ conditions <- read.delim("Conditions.txt", sep = "\t", header = T)
 
 #### reoder columns (consistent with other data)
 
+also prepare suppl table
+
 ``` r
 # protein groups data
-proteingroups  <- peptide_and_pg_data[[2]] 
+proteingroups  <- precursors_diann_3d_old[[2]] 
 
-# reorder, first Genes, afterwards samples (from NG -> HG as in conditions file) finally additional columns
+# reorder, first Genes, afterwards samples (from PNG -> PHG as in conditions file) finally additional columns
 proteingroups_reordered <- proteingroups[c("Genes", str_c("LFQ.intensity_", conditions$Bioreplicate), colnames(proteingroups)[(nrow(conditions)+2):ncol(proteingroups)])]
 
-# prepared protein groups for the suppl table and save
+# prepare protein groups for the suppl table and save
 proteingroups_reordered_suppl <- proteingroups_reordered %>% 
   mutate(Intensity = rowSums(select(., starts_with("LFQ.")), na.rm = T)) %>% 
   arrange(desc(Intensity)) %>% 
-  select(Genes, First.Protein.Description, second_id, starts_with("LFQ."), n_pep, pg_Q_Val) %>% 
+  left_join(seq_cov) %>% 
+  mutate(coverage = round(coverage, 2)) %>% 
+  select(Genes, First.Protein.Description, second_ids, coverage, starts_with("LFQ."), n_pep, pg_Q_Val) %>% 
   rename("Protein names"   = First.Protein.Description,
-         "Protein groups"  = second_id,
+         "Protein groups"  = second_ids,
          "Unique peptides" = n_pep,
+         "Unique sequence coverage %" = coverage,
          "q-value"         = pg_Q_Val) %>%
           write.table("proteingroups.txt", sep = "\t", row.names = F, quote = F)
 ```
+
+    ## Joining, by = "Genes"
 
 #### count percentage of missing values
 
@@ -267,13 +190,13 @@ cat(paste0(round(perc_missing), " %"), "of the data is missing")
 rm(n_total, n_missing, perc_missing)
 ```
 
-#### filter for valid values (keep proteins with at least 60% valid values)
+#### filter for valid values (keep proteins with at least 60% of valid values)
 
 ``` r
 proteingroups_filtered <-  proteingroups %>% 
   mutate(n_valid = 100 - (100 * rowSums(is.na(.))/ncol(proteingroups))) %>% 
   filter(n_valid >= 60) %>% 
-  select(-n_valid)
+  select(-n_valid) 
 
 # count percentage of missing values after filtering
 n_total_afterfiltering   <- nrow(proteingroups_filtered) * ncol(proteingroups_filtered)
@@ -297,7 +220,7 @@ system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_fi
 ```
 
     ##    user  system elapsed 
-    ## 1511.91    2.72 1514.94
+    ## 1472.80    4.42 1477.89
 
 #### save imputed protein groups data
 
@@ -306,7 +229,7 @@ system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_fi
 data_imputed <- data_imputed_RF[["ximp"]] %>% 
   as.data.frame() %>% 
   rownames_to_column("Genes") %>% 
-  left_join(peptide_and_pg_data[[2]] %>% select(-starts_with("LFQ."))) 
+  left_join(precursors_diann_3d_old[[2]] %>% select(-starts_with("LFQ."))) 
 
 # save results
 write.table(data_imputed, "proteingroups_imputed.txt", sep = "\t", row.names = F)
@@ -327,7 +250,8 @@ data_stat <- data_imputed %>%
 
 ``` r
 fc_function <- function(data, conditions_data, condition_name, compared_to, id_name, values_log) {
-  # should values be log transformed?
+ 
+   # should values be log transformed?
   if (values_log == TRUE) {
     data_long <- data %>% 
     pivot_longer(names_to = "Bioreplicate", values_to = "Intensity", -!!as.symbol(id_name)) %>%
@@ -355,6 +279,7 @@ fc_function <- function(data, conditions_data, condition_name, compared_to, id_n
      mutate(l2fc=grp_mean-lag(grp_mean)) %>% 
      select(-grp_mean)  %>% 
      drop_na()
+    
      }
   
    else{
@@ -370,17 +295,19 @@ fc_function <- function(data, conditions_data, condition_name, compared_to, id_n
     
     return(data_fc)
     
-    }
+}
+
+
 # calculate fold-change separately for group and sex
 l2fc_group <- fc_function(data_stat, condition = "Group", conditions_data = conditions,
-                          compared_to  = "HG", values_log= T, id_name = "Genes")
+                          compared_to  = "PHG", values_log= T, id_name = "Genes")
 ```
 
     ## Joining, by = "Bioreplicate"
     ## `summarise()` has grouped output by 'Genes'. You can override using the
     ## `.groups` argument.
 
-    ## positive fold change means up in HG
+    ## positive fold change means up in PHG
 
 ``` r
 l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditions,
@@ -396,7 +323,7 @@ l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditio
 ``` r
 # merge fold-changes
 l2fc_genes <- l2fc_group %>% 
-  rename("l2fc group (HG/NG)" = l2fc) %>% 
+  rename("l2fc group (PHG/PNG)" = l2fc) %>% 
   left_join(l2fc_sex) %>% 
   rename("l2fc sex (F/M)" = l2fc) 
 ```
@@ -426,7 +353,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
     
   data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = p_adj_method)
   # prepare empty data frame with proper comparisons
-  anova_factors <- as.data.frame(rep(c("group (HG/NG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
+  anova_factors <- as.data.frame(rep(c("group (PHG/PNG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
   # rename column 
   names(anova_factors) <- "Comparison"
   
@@ -438,7 +365,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
   }
   
   if (adjust_p_value == FALSE) {
-  anova_factors <- as.data.frame(rep(c("p-value group (HG/NG)", "p-value sex (F/M)", 
+  anova_factors <- as.data.frame(rep(c("p-value group (PHG/PNG)", "p-value sex (F/M)", 
                                        "p-value group:sex"), length = nrow(data_anova)))
   # rename column 
   names(anova_factors) <- "Comparison"
@@ -479,13 +406,13 @@ anova_results <- two_way_anova_fn(data = data_stat, id_name = "Genes",
 ``` r
 # final anova results
 anova_results  <- anova_results %>% 
-  left_join(peptide_and_pg_data[[2]] %>% select(Genes, First.Protein.Description, second_id)) %>% 
-  select("Genes", "First.Protein.Description", "second_id", "l2fc group (HG/NG)", "p-value group (HG/NG)", 
-         "Adjusted p-value group (HG/NG)", "l2fc sex (F/M)", "p-value sex (F/M)", 
+  left_join(precursors_diann_3d_old[[2]] %>% select(Genes, First.Protein.Description, second_ids)) %>% 
+  select("Genes", "First.Protein.Description", "second_ids", "l2fc group (PHG/PNG)", "p-value group (PHG/PNG)", 
+         "Adjusted p-value group (PHG/PNG)", "l2fc sex (F/M)", "p-value sex (F/M)", 
          "Adjusted p-value sex (F/M)", "p-value group:sex", "Adjusted p-value group:sex") %>% 
-  arrange(-desc(`Adjusted p-value group (HG/NG)`)) %>% 
+  arrange(-desc(`Adjusted p-value group (PHG/PNG)`)) %>% 
   rename(`Protein names` = First.Protein.Description,
-         `Protein accession` = second_id) 
+         `Protein group` = second_ids) 
 
 
 # separately significant factors and interactions
@@ -493,13 +420,13 @@ anova_results  <- anova_results %>%
 # significant by group
 anova_results_group <- anova_results %>% 
   select(1:6) %>% 
-  filter(`Adjusted p-value group (HG/NG)` <= 0.05 & abs(`l2fc group (HG/NG)`) > log2(1.5)) %>% 
+  filter(`Adjusted p-value group (PHG/PNG)` <= 0.05 & abs(`l2fc group (PHG/PNG)`) > log2(1.5)) %>% 
           mutate(`Differentially abundant` = case_when(
-                 `l2fc group (HG/NG)` > log2(1.5) ~  "increased in HG",
-                 `l2fc group (HG/NG)` < -log2(1.5) ~ "decreased in HG",
+                 `l2fc group (PHG/PNG)` > log2(1.5) ~  "increased in PHG",
+                 `l2fc group (PHG/PNG)` < -log2(1.5) ~ "decreased in PHG",
              TRUE ~ "n.s."
            )) %>% 
-  arrange(desc(`l2fc group (HG/NG)`)) 
+  arrange(desc(`l2fc group (PHG/PNG)`)) 
 
 
 # significant by sex
@@ -524,7 +451,7 @@ anova_results_int <- anova_results %>%
 #### define functions that performs 2 way anova Tukey’s honest significance difference (interaction significant proteins)
 
 ``` r
-tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data) {
+tkhsd_fn <- function(data, id_name, conditions_file, numeric_data) {
   
   # prepare data
   data_tukey <- data %>% 
@@ -569,8 +496,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data
                as.data.frame() %>% 
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
-               rename(`THSD pair` = 2)) %>% 
-  arrange(desc(arrange_based))
+               rename(`THSD pair` = 2))
   
   
   # data for interaction plot
@@ -598,7 +524,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data
 ``` r
 anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Genes", 
                                   numeric_data = data_stat, 
-                                  arrange_based = "Adjusted p-value group:sex", conditions_file = conditions)
+                                  conditions_file = conditions) 
 ```
 
     ## Joining, by = "Genes"
@@ -616,11 +542,11 @@ anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Genes",
 ``` r
 data_volcano <- anova_results %>% 
                 mutate(significant = case_when(
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) | `Adjusted p-value group (HG/NG)` < 0.05 & 
-                `l2fc group (HG/NG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) | `Adjusted p-value group (PHG/PNG)` < 0.05 & 
+                `l2fc group (PHG/PNG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
                 diff_abundant = case_when(
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) ~ "Increased_in_HG",
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` < -log2(1.5) ~ "Decreased_in_HG",
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) ~ "Increased_in_PHG",
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` < -log2(1.5) ~ "Decreased_in_PHG",
              TRUE ~ "n.s."
            )) 
 ```
@@ -630,17 +556,17 @@ data_volcano <- anova_results %>%
 ``` r
 plot_volcano <- ggplot(data_volcano %>%                       
                        arrange(desc(diff_abundant)), 
-                       mapping = aes(x = `l2fc group (HG/NG)`, y = -log10(`p-value group (HG/NG)`), 
+                       mapping = aes(x = `l2fc group (PHG/PNG)`, y = -log10(`p-value group (PHG/PNG)`), 
                                      fill=diff_abundant, label = Genes, 
                                      alpha = diff_abundant))+
          geom_point(aes(shape =diff_abundant, size = diff_abundant), stroke = 0.25)+
-         scale_shape_manual(values = c(n.s. = 16, Decreased_in_HG =21, Increased_in_HG =21))+
-         scale_size_manual(values=c(n.s. = 1, Decreased_in_HG =1.6, Increased_in_HG =1.6))+
+         scale_shape_manual(values = c(n.s. = 16, Decreased_in_PHG =21, Increased_in_PHG =21))+
+         scale_size_manual(values=c(n.s. = 1, Decreased_in_PHG =1.6, Increased_in_PHG =1.6))+
          scale_fill_manual(values=c("n.s." = "#999999", 
-                                    "Decreased_in_HG"= "#0088AA", "Increased_in_HG"="#e95559ff"))+
-         scale_alpha_manual(values= c("n.s." = 0.3, "Decreased_in_HG"= 1, "Increased_in_HG"= 1))+
+                                    "Decreased_in_PHG"= "#0088AA", "Increased_in_PHG"="#e95559ff"))+
+         scale_alpha_manual(values= c("n.s." = 0.3, "Decreased_in_PHG"= 1, "Increased_in_PHG"= 1))+
          geom_text_repel(data = subset(data_volcano, 
-                                       significant == "+" & `l2fc group (HG/NG)` > 0.6 | significant == "+"  & `l2fc group (HG/NG)` < -0.7),
+                                       significant == "+" & `l2fc group (PHG/PNG)` > 0.6 | significant == "+"  & `l2fc group (PHG/PNG)` < -0.7),
                                        aes(label = Genes),
                                        size = 1.8,
                                        seed = 1234,
@@ -651,8 +577,8 @@ plot_volcano <- ggplot(data_volcano %>%
                           min.segment.length = 0)+
          theme_bw()+
          scale_x_continuous(limits = c(-2, 2.4)) +
-         scale_y_continuous(limits = c(0,8), breaks = c(0,2.5,5,7.5)) +
-         theme(panel.border = element_rect(size = 1, colour = "black"), 
+         scale_y_continuous(limits = c(0,8.2), breaks = c(0,2.5,5,7.5)) +
+         theme(panel.border = element_rect(linewidth = 1, colour = "black"), 
                panel.grid.major = element_line(), 
                panel.grid.minor = element_blank(),
                panel.background = element_blank(), 
@@ -665,7 +591,7 @@ plot_volcano <- ggplot(data_volcano %>%
         theme(axis.title = element_text(size  = 9), 
                axis.text.x = element_text(size = 9, colour = "black", vjust = -0.1), 
                axis.text.y = element_text(size = 9, colour = "black"))+
-         xlab("log2 fold change (HG/NG)")+
+         xlab("log2 fold change (PHG/PNG)")+
          ylab("-log10 p-value")
 ```
 
@@ -673,10 +599,10 @@ plot_volcano <- ggplot(data_volcano %>%
 
 ``` r
 # reorder data
-anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("NG", "HG"))
+anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("PNG", "PHG"))
 
 
-# order of the facets (most significant first)
+# order of the facets (the most significant first)
 order <- anova_results_int %>% arrange(-desc(`Adjusted p-value group:sex`)) %>% 
                        select(Genes)
 order <- order$Genes
@@ -689,7 +615,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
   geom_point(aes(color = Sex))+
   scale_color_manual(values = c("#F0E442", "#E69F00"))+
   theme_bw()+
-  theme(panel.border = element_rect(size = 1, colour = "black"),
+  theme(panel.border = element_rect(linewidth = 1, colour = "black"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank(), 
        panel.background = element_blank(), 
@@ -715,7 +641,10 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
   guides(color=guide_legend(nrow=1, byrow=TRUE))
 ```
 
-![](proteomics_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
+
+![](proteomics_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
 ggsave("anova_interactions.svg", width = 7.1, height = 8.4)
@@ -767,13 +696,13 @@ data_pca <- pca_fn(data_stat, conditions, id_name = "Genes")
 ``` r
 plot_pca <- ggplot(data=data_pca[[1]], aes(x=X*-1, y=Y, fill= Group, label = ID))+
 geom_point(size = 3, aes(shape = Sex), stroke = 0.25)+
-scale_fill_manual(values= c('HG' = "#e95559ff", 'NG' = "#0088AA")) +
+scale_fill_manual(values= c('PHG' = "#e95559ff", 'PNG' = "#0088AA")) +
 scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
 xlab(paste("PC 1 - ", data_pca[[2]][1], "%", sep=""))+
 ylab(paste("PC 2 - ", data_pca[[2]][2], "%", sep=""))+
 geom_hline(yintercept = 0, linetype = "dashed")+
 geom_vline(xintercept = 0, linetype = "dashed")+
-theme_bw() + theme(panel.border = element_rect(size = 1, colour = "black"), 
+theme_bw() + theme(panel.border = element_rect(linewidth = 1, colour = "black"), 
                    axis.ticks = element_line(colour = "black"),
                    axis.title = element_text(size = 9, colour="black"), 
                    axis.text.x = element_text(size=9, colour="black", vjust = -0.1), 
@@ -824,7 +753,7 @@ rm(hm_prep_fn)
 #makes a list with all necessary data for heatmap
 hmap_all_data      <- list()
 hmap_all_data[[1]] <- colorRamp2(c(-1.3, 0, 1.3), c("#0088AA",  "white", "#e95559ff"))
-hmap_all_data[[2]] <- list('Group'  = c('NG' = "#0088AA", 'HG' = "#e95559ff"),
+hmap_all_data[[2]] <- list('Group'  = c('PNG' = "#0088AA", 'PHG' = "#e95559ff"),
                            'Sex'     = c('F' = "#F0E442", 'M' = "#E69F00"))
 hmap_all_data[[3]] <- HeatmapAnnotation(df = conditions %>% select(ID, Group, Sex) %>% column_to_rownames("ID"), 
                             show_legend    = F, 
@@ -857,7 +786,7 @@ hmap <- Heatmap(as.matrix(data_HM),
 ht <- draw(hmap)
 ```
 
-![](proteomics_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](proteomics_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
 
 ``` r
 #calculate actual plot size
@@ -905,7 +834,7 @@ ora_for_cluster_function <- function(data, regulation, fc_threshold, fdr_thresho
   if (regulation == "Decreased") {
     
     data_ora <- data %>% 
-      filter(`l2fc group (HG/NG)` < -log2(fc_threshold) & `Adjusted p-value group (HG/NG)` <= fdr_threshold) %>% 
+      filter(`l2fc group (PHG/PNG)` < -log2(fc_threshold) & `Adjusted p-value group (PHG/PNG)` <= fdr_threshold) %>% 
       select(Genes) %>% 
       as.list()
    
@@ -913,7 +842,7 @@ ora_for_cluster_function <- function(data, regulation, fc_threshold, fdr_thresho
   
   if (regulation == "Increased") {
        data_ora <- anova_results %>% 
-      filter(`l2fc group (HG/NG)` > log2(fc_threshold) & `Adjusted p-value group (HG/NG)` <= fdr_threshold) %>% 
+      filter(`l2fc group (PHG/PNG)` > log2(fc_threshold) & `Adjusted p-value group (PHG/PNG)` <= fdr_threshold) %>% 
       select(Genes) %>% 
       as.list() 
   
@@ -934,7 +863,7 @@ ora_for_cluster_function <- function(data, regulation, fc_threshold, fdr_thresho
   
   # tidy ora output
   ora_results <- ora_results %>% 
-    mutate(Regulation = paste(regulation, "in HG"))
+    mutate(Regulation = paste(regulation, "in PHG"))
   
   return(ora_results)
 }
@@ -998,15 +927,15 @@ ora_data$FDR[ora_data$FDR == 0] <- min(ora_data$FDR[ora_data$FDR > 0])
 
 # choose processes to be displayed on plot
 ora_data_plot <- ora_data %>% 
-  filter(Regulation == "Decreased in HG" &  `GO id` %in% c("GO:0006260", "GO:0032200", "GO:0006289", "GO:0055088", "GO:0006643")|
-         Regulation == "Increased in HG" &  `GO id` %in% c("GO:0016051", "GO:0051188", "GO:0033865", "GO:0006575", "GO:0042180"))
+  filter(Regulation == "Decreased in PHG" &  `GO id` %in% c("GO:0006260", "GO:0032200", "GO:0006289", "GO:0055088", "GO:0006643")|
+         Regulation == "Increased in PHG" &  `GO id` %in% c("GO:0016051", "GO:0051188", "GO:0033865", "GO:0006575", "GO:0042180"))
 ```
 
 ## ORA dot plot
 
 ``` r
 # facet labels
-f_labels <- data.frame(Cluster = c("Decreased in HG", "Increased in HG"), label = c("Decreased in HG", "Increased in HG"))
+f_labels <- data.frame(Cluster = c("Decreased in PHG", "Increased in PHG"), label = c("Decreased in PHG", "Increased in PHG"))
 
 
 # order rows based on enrichment score for SKM
@@ -1016,7 +945,7 @@ ora_data_plot$`Biological process` <- factor(ora_data_plot$`Biological process`,
 plot_ora <- ggplot(ora_data_plot, aes(x = `Fold enrichment`, y= `Biological process`, fill = -log10(FDR), size = `Gene count`)) +
  geom_point(shape = 21)+
  theme_bw() +
- theme(panel.border = element_rect(size = 1),
+ theme(panel.border = element_rect(linewidth = 1),
                             axis.text.x = element_text(colour = "black", size = 9),
                             axis.title  = element_text(size = 9),
                             axis.text.y = element_text(size = 9, colour = "black"))+
@@ -1024,11 +953,11 @@ plot_ora <- ggplot(ora_data_plot, aes(x = `Fold enrichment`, y= `Biological proc
                       ylab("")+
                       theme(plot.title = element_text(size = 8, hjust=0.5,
                                                       face = "bold")) +
-                      theme(panel.border = element_rect(size = 1, colour = "black"),
+                      theme(panel.border = element_rect(linewidth = 1, colour = "black"),
                             panel.grid.major = element_line(),
                             axis.ticks = element_line(colour = "black"),
                             panel.grid.minor = element_blank())+
-                      scale_size_continuous(name = "Count", range = c(1.8, 4.2))+
+                      scale_size_continuous(name = "Count", range = c(1.8, 4.2), breaks = c(5,10,15))+
                       scale_fill_gradient(name = "-log10(FDR)", low = "#007ea7", high = "#003459")+
                       theme(legend.position = "bottom", 
                             legend.box.spacing = unit(0.8, 'mm'), 
@@ -1048,13 +977,6 @@ plot_ora <- ggplot(ora_data_plot, aes(x = `Fold enrichment`, y= `Biological proc
 p0     <- rectGrob(width = 1, height = 1)
 plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("B", "C"), font.label = list(size = 17),
           ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-w1,7.1-w1))
-```
-
-    ## Warning: Removed 1 rows containing missing values (geom_point).
-
-    ## Warning: Removed 1 rows containing missing values (geom_text_repel).
-
-``` r
 plot_2 <- ggarrange(plot_hmap, NA, nrow = 2, heights = c(h1, 5.82-h1), widths = c(w1,w1))
 ```
 
@@ -1094,7 +1016,7 @@ write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 1.xlsx"
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 }
