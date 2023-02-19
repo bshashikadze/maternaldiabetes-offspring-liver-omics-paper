@@ -1,7 +1,7 @@
-statistical analysis of metabolomics data with visualization
+statistical analysis and visualization of metabolomics data
 ================
 BS
-01/12/2020
+19/02/2023
 
 ## load libraries
 
@@ -16,8 +16,6 @@ library(ropls)
 library(xlsx)
 ```
 
-    ## Warning: package 'xlsx' was built under R version 4.2.2
-
 ## load data
 
 ``` r
@@ -30,12 +28,12 @@ conditions        <- read.delim("Conditions.txt", sep = "\t", header = T)
 ``` r
 # ratios
 ratios_data_tidy <- metabolomics_data %>% 
-  filter(Class == "ratio") %>% 
+  filter(Class == "Metabolite ratio") %>% 
   select(Metabolite, starts_with("D"))
 
 # metabolite concentrations
 metabolomics_data_tidy <- metabolomics_data %>% 
-  filter(Class != "ratio") %>% 
+  filter(Class != "Metabolite ratio") %>% 
   select(Metabolite, starts_with("D"))
 ```
 
@@ -52,6 +50,7 @@ data_stat <- metabolomics_data_tidy %>%
 
 ``` r
 fc_function <- function(data, conditions_data, condition_name, compared_to, id_name, values_log) {
+  
   # should values be log transformed?
   if (values_log == TRUE) {
     data_long <- data %>% 
@@ -99,14 +98,14 @@ fc_function <- function(data, conditions_data, condition_name, compared_to, id_n
 
 # calculate fold-change separately for group and sex
 l2fc_group <- fc_function(data_stat, condition = "Group", conditions_data = conditions,
-                          compared_to  = "HG", values_log= T, id_name = "Metabolite")
+                          compared_to  = "PHG", values_log= T, id_name = "Metabolite")
 ```
 
     ## Joining, by = "Bioreplicate"
     ## `summarise()` has grouped output by 'Metabolite'. You can override using the
     ## `.groups` argument.
 
-    ## positive fold change means up in HG
+    ## positive fold change means up in PHG
 
 ``` r
 l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditions,
@@ -122,7 +121,7 @@ l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditio
 ``` r
 # merge fold-changes
 l2fc_metabolites <- l2fc_group %>% 
-  rename("l2fc group (HG/NG)" = l2fc) %>% 
+  rename("l2fc group (PHG/PNG)" = l2fc) %>% 
   left_join(l2fc_sex) %>% 
   rename("l2fc sex (F/M)" = l2fc) 
 ```
@@ -152,7 +151,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
     
   data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = p_adj_method)
   # prepare empty data frame with proper comparisons
-  anova_factors <- as.data.frame(rep(c("group (HG/NG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
+  anova_factors <- as.data.frame(rep(c("group (PHG/PNG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
   # rename column 
   names(anova_factors) <- "Comparison"
   
@@ -164,7 +163,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
   }
   
   if (adjust_p_value == FALSE) {
-  anova_factors <- as.data.frame(rep(c("p-value group (HG/NG)", "p-value sex (F/M)", 
+  anova_factors <- as.data.frame(rep(c("p-value group (PHG/PNG)", "p-value sex (F/M)", 
                                        "p-value group:sex"), length = nrow(data_anova)))
   # rename column 
   names(anova_factors) <- "Comparison"
@@ -204,23 +203,23 @@ anova_results <- two_way_anova_fn(data = data_stat, id_name = "Metabolite",
 # final anova results
 anova_results  <- anova_results %>% 
   left_join(metabolomics_data %>% select(Metabolite, Class)) %>% 
-  select("Metabolite", "Class", "l2fc group (HG/NG)", "p-value group (HG/NG)", 
-         "Adjusted p-value group (HG/NG)", "l2fc sex (F/M)", "p-value sex (F/M)", 
+  select("Metabolite", "Class", "l2fc group (PHG/PNG)", "p-value group (PHG/PNG)", 
+         "Adjusted p-value group (PHG/PNG)", "l2fc sex (F/M)", "p-value sex (F/M)", 
          "Adjusted p-value sex (F/M)", "p-value group:sex", "Adjusted p-value group:sex") %>% 
-  arrange(-desc(`Adjusted p-value group (HG/NG)`)) 
+  arrange(-desc(`Adjusted p-value group (PHG/PNG)`)) 
 
 
 # separately significant factors and interactions
 # significant by group
 anova_results_group <- anova_results %>% 
   select(1:5) %>% 
-  filter(`Adjusted p-value group (HG/NG)` <= 0.05 & abs(`l2fc group (HG/NG)`) > log2(1.5)) %>% 
+  filter(`Adjusted p-value group (PHG/PNG)` <= 0.05 & abs(`l2fc group (PHG/PNG)`) > log2(1.5)) %>% 
           mutate(`Differentially abundant` = case_when(
-                 `l2fc group (HG/NG)` >  log2(1.5)  ~  "increased in HG",
-                 `l2fc group (HG/NG)` < -log2(1.5)  ~ "decreased in HG",
+                 `l2fc group (PHG/PNG)` >  log2(1.5)  ~  "increased in PHG",
+                 `l2fc group (PHG/PNG)` < -log2(1.5)  ~  "decreased in PHG",
              TRUE ~ "n.s."
            )) %>% 
-  arrange(desc(`l2fc group (HG/NG)`)) 
+  arrange(desc(`l2fc group (PHG/PNG)`)) 
 
 
 # significant by sex
@@ -245,7 +244,7 @@ anova_results_int <- anova_results %>%
 #### define functions that performs 2 way anova Tukey’s honest significance difference (interaction significant proteins)
 
 ``` r
-tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data) {
+tkhsd_fn <- function(data, id_name, conditions_file, numeric_data) {
   
   # prepare data
   data_tukey <- data %>% 
@@ -290,8 +289,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data
                as.data.frame() %>% 
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
-               rename(`THSD pair` = 2)) %>% 
-  arrange(desc(arrange_based))
+               rename(`THSD pair` = 2))
   
   
   # data for interaction plot
@@ -317,7 +315,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data
 ##### THSD of metabolite interactions
 
 ``` r
-anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metabolite", numeric_data = data_stat, arrange_based = "p-value group:sex", conditions_file = conditions)
+anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metabolite", numeric_data = data_stat, conditions_file = conditions)
 ```
 
     ## Joining, by = "Metabolite"
@@ -335,11 +333,11 @@ anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Metaboli
 ``` r
 data_volcano <- anova_results %>% 
                 mutate(significant = case_when(
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) | `Adjusted p-value group (HG/NG)` < 0.05 & 
-                `l2fc group (HG/NG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) | `Adjusted p-value group (PHG/PNG)` < 0.05 & 
+                `l2fc group (PHG/PNG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
                 diff_abundant = case_when(
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` > log2(1.5) ~  "Increased_in_HG",
-                `Adjusted p-value group (HG/NG)` < 0.05 & `l2fc group (HG/NG)` < -log2(1.5) ~ "Decreased_in_HG",
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5)  ~  "Increased_in_PHG",
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)`     < -log2(1.5) ~  "Decreased_in_PHG",
              TRUE ~ "n.s."
            )) 
 ```
@@ -349,21 +347,19 @@ data_volcano <- anova_results %>%
 ``` r
 plot_volcano <- ggplot(data_volcano %>%                       
                        arrange(desc(diff_abundant)), 
-                       mapping = aes(x = `l2fc group (HG/NG)`, y = -log10(`p-value group (HG/NG)`), 
+                       mapping = aes(x = `l2fc group (PHG/PNG)`, y = -log10(`p-value group (PHG/PNG)`), 
                                      fill=Class, label = Metabolite))+
-         geom_point(size = 2.2, shape =21, stroke = 0.25)+
+         geom_point(aes(shape = diff_abundant, size = diff_abundant), stroke = 0.25)+
          scale_fill_manual(values=c("Glycerophospholipids" = "#6A3D9A", 
                                     "Biogenic Amines"      = "#FB9A99",      
                                     "Sphingolipids"        = "#E31A1C",
                                     "Aminoacids"           = "#B2DF8A",
                                     "Acylcarnitines"       = "#FFFF99",
                                     "Sugars"               = "#33A02C"))+
-         geom_hline(yintercept = -log10(max(data_volcano$`p-value group (HG/NG)`[data_volcano$significant=="+"])), 
-                    linetype    = "dashed", color = 'black') +
-         geom_vline(xintercept = -log2(1.5), linetype = "dashed", color = 'black') +
-         geom_vline(xintercept =  log2(1.5), linetype  = "dashed", color = 'black') +
+         scale_shape_manual(values = c('Increased_in_PHG' = 24, 'Decreased_in_PHG' = 25, "n.s." = 21)) + 
+         scale_size_manual(values = c('Increased_in_PHG' = 2.5, 'Decreased_in_PHG' = 2.5, "n.s." = 2)) + 
          theme_bw()+
-         scale_x_continuous(limits = c(-1.5, 1.5), breaks = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5)) +
+         scale_x_continuous(limits = c(-1.9, 1.5), breaks = c(-2,-1.5, -1, -0.5, 0, 0.5, 1, 1.5)) +
          scale_y_continuous(limits = c(0,8), breaks = c(0,2,4,6,8)) +
          theme(panel.border = element_rect(size = 1, color = "black"), 
                panel.grid.major = element_line(), 
@@ -381,12 +377,16 @@ plot_volcano <- ggplot(data_volcano %>%
                             legend.spacing.x  = unit(0.01, 'mm'),
                             legend.margin=margin(0,0,0,0),
                             legend.box.margin=margin(-1.5,0,0,0)) + 
-       guides(shape = "none") +
-       guides(fill = guide_legend(nrow=3, byrow=TRUE, keyheight=0.15,
-                 default.unit="inch", override.aes=list(shape=21)))+
-         xlab("log2 fold change (HG/NG)")+
+        guides(shape = "none") +
+        guides(size = "none") +
+        guides(fill = guide_legend(nrow=3, byrow=TRUE, keyheight=0.15,
+                 default.unit="inch", override.aes=list(shape=21, size = 3)))+
+         xlab("log2 fold change (PHG/PNG)")+
          ylab("-log10 p-value")
 ```
+
+    ## Warning: The `size` argument of `element_rect()` is deprecated as of ggplot2 3.4.0.
+    ## ℹ Please use the `linewidth` argument instead.
 
 ## supervised clustering
 
@@ -394,10 +394,10 @@ plot_volcano <- ggplot(data_volcano %>%
 
 ``` r
 # pca function
-pca_fn <- function(data, conditions_file, id_name) {
+pca_fn <- function(data, conditions_file, id_name, scale) {
   
           # caclulate principal components of transposed dataframe
-          PCA <- prcomp(t(data %>% column_to_rownames(id_name)))
+          PCA <- prcomp(scale = scale, t(data %>% column_to_rownames(id_name)))
           
           # export results for ggplot
           # according to https://www.youtube.com/watch?v=0Jp4gsfOLMs (StatQuest: PCA in R)
@@ -428,7 +428,7 @@ pca_fn <- function(data, conditions_file, id_name) {
 #### calculate PCs
 
 ``` r
-data_pca <- pca_fn(data_stat, conditions, id_name = "Metabolite")
+data_pca <- pca_fn(data_stat, conditions, id_name = "Metabolite", scale = T)
 ```
 
     ## Joining, by = "Bioreplicate"
@@ -438,7 +438,7 @@ data_pca <- pca_fn(data_stat, conditions, id_name = "Metabolite")
 ``` r
 plot_pca <- ggplot(data=data_pca[[1]], aes(x=X*-1, y=Y, fill= Group, label = ID))+
 geom_point(size = 3, aes(shape = Sex), stroke = 0.25)+
-scale_fill_manual(values= c('HG' = "#e95559ff", 'NG' = "#0088AA")) +
+scale_fill_manual(values= c('PHG' = "#e95559ff", 'PNG' = "#0088AA")) +
 scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
 xlab(paste("PC 1 - ", data_pca[[2]][1], "%", sep=""))+
 ylab(paste("PC 2 - ", data_pca[[2]][2], "%", sep=""))+
@@ -494,7 +494,7 @@ data_HM <- hm_prep_fn(data = data_stat, id_name = "Metabolite")
 #makes a list with all necessary data for heatmap
 hmap_all_data      <- list()
 hmap_all_data[[1]] <- colorRamp2(c(-1.3, 0, 1.3), c("#0088AA",  "white", "#e95559ff"))
-hmap_all_data[[2]] <- list('Group'  = c('NG' = "#0088AA", 'HG' = "#e95559ff"),
+hmap_all_data[[2]] <- list('Group'  = c('PNG' = "#0088AA", 'PHG' = "#e95559ff"),
                            'Sex'     = c('F' = "#F0E442", 'M' = "#E69F00"))
 
 hmap_all_data[[3]] <- HeatmapAnnotation(df = conditions %>% select(ID, Group, Sex) %>% column_to_rownames("ID"), 
@@ -588,8 +588,8 @@ oplsda_function <- function (data, scaling = "pareto", n_perm = 200,
     left_join(stat_data) %>% 
     mutate(VIP_sig = case_when(VIP > vip_thresh ~ "+")) %>% 
     mutate(Regulation = case_when(
-      `l2fc group (HG/NG)` > 0 & VIP_sig  == "+" ~ "Increased in HG",
-      `l2fc group (HG/NG)`  < 0 & VIP_sig == "+" ~ "Decreased in HG",
+      `l2fc group (PHG/PNG)` > 0 & VIP_sig  == "+" ~ "Increased in PHG",
+      `l2fc group (PHG/PNG)`  < 0 & VIP_sig == "+" ~ "Decreased in PHG",
       TRUE ~ "n.s."
     ))  
   oplsda_vip$Compound <- factor(oplsda_vip$Metabolite, levels = oplsda_vip$Metabolite[order(oplsda_vip$VIP)])
@@ -612,10 +612,10 @@ data_oplsda <- oplsda_function(data_stat %>% column_to_rownames("Metabolite"), s
 ```
 
     ## OPLS-DA
-    ## 19 samples x 164 variables and 1 response
+    ## 19 samples x 166 variables and 1 response
     ## pareto scaling of predictors and standard scaling of response(s)
     ##       R2X(cum) R2Y(cum) Q2(cum)  RMSEE pre ort  pR2Y   pQ2
-    ## Total    0.581    0.988   0.931 0.0618   1   2 0.002 0.002
+    ## Total    0.573    0.988   0.925 0.0614   1   2 0.002 0.002
 
     ## Joining, by = "Metabolite"
 
@@ -625,8 +625,8 @@ data_oplsda <- oplsda_function(data_stat %>% column_to_rownames("Metabolite"), s
 # metabolomics data with VIP scores
 anova_results <- anova_results %>% 
   left_join(data_oplsda[[2]] %>% select(Metabolite, VIP)) %>% 
-  rename("VIP score (HG/NG)" = VIP) %>% 
-  relocate("VIP score (HG/NG)", .after = `l2fc group (HG/NG)`)
+  rename("VIP score (PHG/PNG)" = VIP) %>% 
+  relocate("VIP score (PHG/PNG)", .after = `l2fc group (PHG/PNG)`)
 ```
 
     ## Joining, by = "Metabolite"
@@ -636,18 +636,18 @@ anova_results <- anova_results %>%
 ``` r
 plot_oplsda <- ggplot(data=data_oplsda[[1]], aes(x=p1, y=o1, fill = Group))+
 geom_point(size = 3, shape =21, stroke = 0.25)+
-scale_fill_manual(values=c('HG' = "#e95559ff", 'NG' = "#0088AA"))+
+scale_fill_manual(values=c('PHG' = "#e95559ff", 'PNG' = "#0088AA"))+
 xlab(paste("OPLS-DA axis 1 - ", data_oplsda[[3]], "%", sep=""))+
 ylab("OPLS-DA axis 2")+
 geom_hline(yintercept = 0, linetype = "dashed")+
 geom_vline(xintercept = 0, linetype = "dashed")+
 theme_bw() + 
-  theme(panel.border = element_rect(size = 1, colour = "black"),
+  theme(panel.border = element_rect(linewidth = 1, colour = "black"),
                    axis.ticks = element_line(colour = "black"),
                    axis.title = element_text(size = 9, colour="black"), 
                    axis.text.x = element_text(size=9, colour="black"), 
                    axis.text.y = element_text(size = 9, colour="black"),
-panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+panel.grid.major = element_line(), panel.grid.minor = element_blank())+
 theme(legend.position = "top", legend.box.spacing = unit(0.5, 'mm'), 
       legend.title = element_blank(), 
       legend.text = element_text(size = 8.5))
@@ -686,7 +686,7 @@ theme(plot.margin = margin(12.1,2,1,1, "mm"))
 
 ``` r
 # reorder data
-anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("NG", "HG"))
+anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("PNG", "PHG"))
 
 # plot
 ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
@@ -697,7 +697,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
   scale_color_manual(values = c("#F0E442", "#E69F00"))+
   theme_bw()+
   xlab("")+
-  theme(panel.border = element_rect(size = 1, colour = "black"),
+  theme(panel.border = element_rect(linewidth = 1, colour = "black"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank(), 
        panel.background = element_blank(), 
@@ -709,7 +709,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
         axis.text.y = element_text(size = 9, colour = "black"))+
   theme(legend.position = "bottom", legend.title = element_text(size = 8.5), axis.text = element_text(size = 8.5))+
   facet_wrap(~factor(Metabolite, levels=unique(anova_results_int_tuk[[1]]$Metabolite)), scales = "free", ncol = 5) +
-  ylab("Metabolite concentration (log2)")+
+  ylab("log2 metabolite concentration (pmol/mg)")+
   geom_text(x = Inf, y = -Inf, 
             aes(label = paste("p=",`Adjusted p-value group:sex`)),  
             size = 2.8, 
@@ -720,6 +720,9 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
                         mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   theme(strip.background = element_blank(), strip.text = element_text())
 ```
+
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
 
 ![](metabolomics_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
@@ -739,14 +742,14 @@ data_stat_ratios <- ratios_data_tidy %>%
 
 # calculate fold-change separately for group and sex
 l2fc_group <- fc_function(data_stat_ratios, condition = "Group", conditions_data = conditions,
-                          compared_to  = "HG", values_log= T, id_name = "Metabolite")
+                          compared_to  = "PHG", values_log= T, id_name = "Metabolite")
 ```
 
     ## Joining, by = "Bioreplicate"
     ## `summarise()` has grouped output by 'Metabolite'. You can override using the
     ## `.groups` argument.
 
-    ## positive fold change means up in HG
+    ## positive fold change means up in PHG
 
 ``` r
 l2fc_sex <- fc_function(data_stat_ratios, condition = "Sex", conditions_data = conditions,
@@ -762,7 +765,7 @@ l2fc_sex <- fc_function(data_stat_ratios, condition = "Sex", conditions_data = c
 ``` r
 # merge fold-changes
 l2fc_ratios <- l2fc_group %>% 
-  rename("l2fc group (HG/NG)" = l2fc) %>% 
+  rename("l2fc group (PHG/PNG)" = l2fc) %>% 
   left_join(l2fc_sex) %>% 
   rename("l2fc sex (F/M)" = l2fc) 
 ```
@@ -788,10 +791,10 @@ anova_results_ratios <- two_way_anova_fn(data = data_stat_ratios, id_name = "Met
 # final anova results
 anova_results_ratios  <- anova_results_ratios %>% 
   left_join(metabolomics_data %>% select(Metabolite, Class)) %>% 
-  select("Metabolite", "l2fc group (HG/NG)", "p-value group (HG/NG)", 
-         "Adjusted p-value group (HG/NG)", "l2fc sex (F/M)", "p-value sex (F/M)", 
+  select("Metabolite", "l2fc group (PHG/PNG)", "p-value group (PHG/PNG)", 
+         "Adjusted p-value group (PHG/PNG)", "l2fc sex (F/M)", "p-value sex (F/M)", 
          "Adjusted p-value sex (F/M)", "p-value group:sex", "Adjusted p-value group:sex") %>% 
-  arrange(-desc(`Adjusted p-value group (HG/NG)`)) 
+  arrange(-desc(`Adjusted p-value group (PHG/PNG)`)) 
 ```
 
     ## Joining, by = "Metabolite"
@@ -800,13 +803,13 @@ anova_results_ratios  <- anova_results_ratios %>%
 # significant by group
 anova_results_ratios_group <- anova_results_ratios %>% 
   select(1:4) %>% 
-  filter(`Adjusted p-value group (HG/NG)` <= 0.05) %>% 
+  filter(`Adjusted p-value group (PHG/PNG)` <= 0.05) %>% 
           mutate(`Differentially abundant` = case_when(
-                 `l2fc group (HG/NG)` > log2(1) ~  "increased in HG",
-                 `l2fc group (HG/NG)` < -log2(1) ~ "decreased in HG",
+                 `l2fc group (PHG/PNG)` > log2(1) ~  "increased in PHG",
+                 `l2fc group (PHG/PNG)` < -log2(1) ~ "decreased in PHG",
              TRUE ~ "n.s."
            )) %>% 
-  arrange(desc(`l2fc group (HG/NG)`)) 
+  arrange(desc(`l2fc group (PHG/PNG)`)) 
 ```
 
 ### plot anova significant results (ratios)
@@ -849,17 +852,18 @@ bar_chart_fn <- function(data_statistics,
     left_join(error_bar) 
   
   # reorder data
-  data_plot$Group <- factor(data_plot$Group, levels = c("NG", "HG"))
+  data_plot$Group <- factor(data_plot$Group, levels = c("PNG", "PHG"))
   
   
   # plot
   plot_data <- ggplot(data_plot %>% mutate(Value = 2^Value), aes(x=Group, y=Value))+
   geom_bar(stat = "summary", fun = mean, aes(fill = Group), alpha = 1, color = "black", lwd=0.15,
            width=n_widht/length(unique(data_plot$Group))) + 
-  geom_jitter(size = point_size,  fill = "grey", alpha = 0.8, stroke =0.25, shape = 21, width = jitt_widht)+
+  geom_jitter(size = point_size,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = jitt_widht)+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                 position=position_dodge(0.05)) +
-  scale_fill_manual(values=c('NG' = "#0088AA", 'HG' = "#e95559ff")) +
+  scale_fill_manual(values=c('PNG' = "#0088AA", 'PHG' = "#e95559ff")) +
+  scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
   theme_bw() +
   xlab("") +
   theme(panel.border = element_rect(size = 1, colour = "black"),
@@ -886,7 +890,7 @@ bar_chart_fn <- function(data_statistics,
 ``` r
 # plot ratios
 plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>% 
-                              filter(`Adjusted p-value group (HG/NG)` <= 0.05),
+                              filter(`Adjusted p-value group (PHG/PNG)` <= 0.05),
                             numeric_data = data_stat_ratios, 
                             point_size = 2, 
                             strip_text_size = 9,
@@ -896,17 +900,18 @@ plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>%
                             conditions_data = conditions)+
             ylab("pmol/mg")+
             geom_text(x = Inf, y = -Inf, 
-            aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
+            aes(label = paste("p=", `Adjusted p-value group (PHG/PNG)`)),  
             size = 3, 
             hjust = -1.55, 
             angle = 90,
             vjust = -0.6, 
             data = anova_results_ratios %>% 
-            filter(`Adjusted p-value group (HG/NG)` <= 0.05)  %>% 
+            filter(`Adjusted p-value group (PHG/PNG)` <= 0.05)  %>% 
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   facet_wrap(~factor(Metabolite, levels=c('Total PC ae','PUFA (PC) / MUFA (PC)','Total SM')), scales = "free_y", ncol = 3)+
-  theme(legend.position = c(0.5, -0.31))+
-  guides(fill=guide_legend(nrow=1, byrow=TRUE))+
+  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+         fill = guide_legend(order = 1))+
+  theme(legend.position = "bottom")+
   theme(plot.margin = margin(1,2,-5,3, "mm"))
 ```
 
@@ -930,7 +935,7 @@ plot_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
                             conditions_data = conditions)+
             ylab("pmol/mg")+
             geom_text(x = Inf, y = -Inf, 
-            aes(label = paste("p=", `Adjusted p-value group (HG/NG)`)),  
+            aes(label = paste("p=", `Adjusted p-value group (PHG/PNG)`)),  
             size = 3, 
             hjust = -1.65, 
             angle = 90,
@@ -944,7 +949,7 @@ plot_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
                                           'SDMA',
                                           'ADMA')), scales = "free_y", ncol = 3)+
   theme(legend.position = c(0.85, 0.2))+
-  guides(fill=guide_legend(nrow=2, byrow=TRUE))+
+  guides(fill=guide_legend(nrow=2, byrow=TRUE, order = 1), shape = guide_legend(override.aes = list(stroke = 1, shape  = c(0,1))))+
   theme(plot.margin = margin(1,2,-5,3, "mm"))
 ```
 
@@ -968,10 +973,10 @@ plot_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
     left_join(anova_results_group) %>% 
     select(1,5) %>% 
     column_to_rownames("Metabolite") %>% 
-    rename(adj_p_value = `Adjusted p-value group (HG/NG)`) %>% 
+    rename(adj_p_value = `Adjusted p-value group (PHG/PNG)`) %>% 
     mutate(padj_star = case_when(adj_p_value < 0.001 &  adj_p_value >  0     ~ "***",
-                         adj_p_value < 0.01         &  adj_p_value >  0.001 ~ "**",
-                         adj_p_value < 0.05         &  adj_p_value >  0.01  ~ "*",
+                         adj_p_value < 0.01         &  adj_p_value >  0.001  ~ "**",
+                         adj_p_value < 0.05         &  adj_p_value >  0.01   ~ "*",
                          adj_p_value > 0.05                          ~ ""))
 ```
 
@@ -1070,9 +1075,9 @@ data_midy <- read.delim("blutke_metabolomics.txt", sep = "\t", header = T)
 
 # prepare data
 MIDY_offspring_data <- anova_results_group %>% 
-  select(Metabolite, `l2fc group (HG/NG)`, `Adjusted p-value group (HG/NG)`, Class) %>% 
+  select(Metabolite, `l2fc group (PHG/PNG)`, `Adjusted p-value group (PHG/PNG)`, Class) %>% 
   left_join(data_midy) %>% 
-  filter(`Adjusted p-value group (HG/NG)` <= 0.05) %>% 
+  filter(`Adjusted p-value group (PHG/PNG)` <= 0.05) %>% 
   mutate(sig_midy = case_when(p.value <= 0.05 ~ "+",
                               TRUE ~ "-")) %>% 
   mutate(label = case_when(Metabolite == "PC aa C36:6"  | Metabolite == "PC ae C38:0"  | Metabolite == "PC aa C32:1"  ~ Metabolite,
@@ -1085,11 +1090,11 @@ MIDY_offspring_data <- anova_results_group %>%
 
 ``` r
 # plot
-plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (HG/NG)`, y = l2fc, label = label)) +
+plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (PHG/PNG)`, y = l2fc, label = label)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   geom_vline(xintercept = 0, linetype = "dashed") +
   geom_point(aes(shape = sig_midy, fill = Class), size = 2.7) +
-  xlab(paste0("log2 fold change", " (HG/NG)"))+
+  xlab(paste0("log2 fold change", " (PHG/PNG)"))+
   ylab(paste0("log2 fold change", " (MIDY/WT)"))+
   scale_x_continuous(limits = c(-0.85, 1.5)) +
   scale_y_continuous(limits = c(-0.85, 1.5)) +
@@ -1163,7 +1168,7 @@ p5 <-   plot_grid(plot_other_sig, p0, nrow = 2, rel_widths = c(1,1), rel_heights
 p6 <-   plot_grid(p0, plot_corr, nrow = 2, rel_widths = c(1,1), rel_heights = c(0.24,3.76), labels = c("E"), label_size = 17)
 ```
 
-    ## Warning: Removed 21 rows containing missing values (geom_text_repel).
+    ## Warning: Removed 21 rows containing missing values (`geom_text_repel()`).
 
 ``` r
 p7 <-   plot_grid(p5, p6, rel_widths = c(3.7,3.4), rel_heights = c(1,1))
@@ -1182,31 +1187,31 @@ ggsave("metabolomics_figure_2.svg", width = 7.1, height = 7.9)
 if (!file.exists("Supplementary table 2.xlsx")) {
   
 # metabolomics data (all)
-write.xlsx(as.data.frame(metabolomics_data), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2A", 
+write.xlsx(as.data.frame(metabolomics_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3A", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2D", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2E", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3E", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios)
-write.xlsx(as.data.frame(anova_results_ratios), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2F", 
+write.xlsx(as.data.frame(anova_results_ratios), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios significant by group)
-write.xlsx(as.data.frame(anova_results_ratios_group), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2G", 
+write.xlsx(as.data.frame(anova_results_ratios_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3G", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 
