@@ -13,8 +13,6 @@ library(ggpubr)
 library(xlsx)
 ```
 
-    ## Warning: package 'xlsx' was built under R version 4.2.2
-
 ## load data
 
 ``` r
@@ -82,14 +80,14 @@ fc_function <- function(data, conditions_data, condition_name, compared_to, id_n
     }
 # calculate fold-change separately for group and sex
 l2fc_group <- fc_function(data_stat, condition = "Group", conditions_data = conditions,
-                          compared_to  = "HG", values_log = T, id_name = "Parameter")
+                          compared_to  = "PHG", values_log = T, id_name = "Parameter")
 ```
 
     ## Joining, by = "Bioreplicate"
     ## `summarise()` has grouped output by 'Parameter'. You can override using the
     ## `.groups` argument.
 
-    ## positive fold change means up in HG
+    ## positive fold change means up in PHG
 
 ``` r
 l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditions,
@@ -105,7 +103,7 @@ l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditio
 ``` r
 # merge fold-changes
 l2fc_parameters <- l2fc_group %>% 
-  rename("l2fc group (HG/NG)" = l2fc) %>% 
+  rename("l2fc group (PHG/PNG)" = l2fc) %>% 
   left_join(l2fc_sex) %>% 
   rename("l2fc sex (F/M)" = l2fc) 
 ```
@@ -135,7 +133,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
     
   data_anova$`Adjusted p-value`  <- p.adjust(data_anova$`p-value`, method = p_adj_method)
   # prepare empty data frame with proper comparisons
-  anova_factors <- as.data.frame(rep(c("group (HG/NG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
+  anova_factors <- as.data.frame(rep(c("group (PHG/PNG)", "sex (F/M)", "group:sex"), length = nrow(data_anova)))
   # rename column 
   names(anova_factors) <- "Comparison"
   
@@ -147,7 +145,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
   }
   
   if (adjust_p_value == FALSE) {
-  anova_factors <- as.data.frame(rep(c("p-value group (HG/NG)", "p-value sex (F/M)", 
+  anova_factors <- as.data.frame(rep(c("p-value group (PHG/PNG)", "p-value sex (F/M)", 
                                        "p-value group:sex"), length = nrow(data_anova)))
   # rename column 
   names(anova_factors) <- "Comparison"
@@ -191,23 +189,23 @@ anova_results <- two_way_anova_fn(data = data_stat, id_name = "Parameter",
 # final anova results
 anova_results  <- anova_results %>% 
   left_join(clinical_chem_data %>% select(Parameter, Explanation)) %>% 
-  select("Parameter", "Explanation", "l2fc group (HG/NG)", "p-value group (HG/NG)", 
+  select("Parameter", "Explanation", "l2fc group (PHG/PNG)", "p-value group (PHG/PNG)", 
          "l2fc sex (F/M)", "p-value sex (F/M)", 
          "p-value group:sex") %>% 
-  arrange(-desc(`p-value group (HG/NG)`)) 
+  arrange(-desc(`p-value group (PHG/PNG)`)) 
 
 
 # separately significant factors and interactions
 # significant by group
 anova_results_group <- anova_results %>% 
   select(1:4) %>% 
-  filter(`p-value group (HG/NG)` <= 0.05 & abs(`l2fc group (HG/NG)`) > log2(1)) %>% 
+  filter(`p-value group (PHG/PNG)` <= 0.05 & abs(`l2fc group (PHG/PNG)`) > log2(1)) %>% 
           mutate(`Differentially abundant` = case_when(
-                 `l2fc group (HG/NG)` > log2(1) ~  "increased in HG",
-                 `l2fc group (HG/NG)` < -log2(1) ~ "decreased in HG",
+                 `l2fc group (PHG/PNG)` > log2(1) ~  "increased in PHG",
+                 `l2fc group (PHG/PNG)` < -log2(1) ~ "decreased in PHG",
              TRUE ~ "n.s."
            )) %>% 
-  arrange(desc(`l2fc group (HG/NG)`)) 
+  arrange(desc(`l2fc group (PHG/PNG)`)) 
 
 
 # significant by sex
@@ -232,7 +230,7 @@ anova_results_int <- anova_results %>%
 #### define functions that performs 2 way anova Tukey’s honest significance difference (interaction significant proteins)
 
 ``` r
-tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data) {
+tkhsd_fn <- function(data, id_name, conditions_file, numeric_data) {
   
   # prepare data
   data_tukey <- data %>% 
@@ -277,9 +275,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data
                as.data.frame() %>% 
                rownames_to_column("parameter") %>% 
                rename_all(~str_replace(., "parameter", id_name)) %>% 
-               rename(`THSD pair` = 2)) %>% 
-  arrange(desc(arrange_based))
-  
+               rename(`THSD pair` = 2)) 
   
   # data for interaction plot
   tkhsd[[2]] <- numeric_data %>%  
@@ -304,7 +300,7 @@ tkhsd_fn <- function(data, id_name, conditions_file, arrange_based, numeric_data
 ##### THSD of clinical chemical parameter interactions
 
 ``` r
-anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Parameter", numeric_data = data_stat, arrange_based = "p-value group:sex", conditions_file = conditions)
+anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Parameter", numeric_data = data_stat, conditions_file = conditions)
 ```
 
     ## Joining, by = "Parameter"
@@ -319,7 +315,7 @@ anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Paramete
 
 ``` r
 # reorder data
-anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("NG", "HG"))
+anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("PNG", "PHG"))
 
 # plot
 ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
@@ -329,7 +325,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
   geom_point(aes(color = Sex))+
   scale_color_manual(values = c("#F0E442", "#E69F00"))+
   theme_bw()+
-  theme(panel.border = element_rect(size = 1, colour = "black"),
+  theme(panel.border = element_rect(linewidth =  1, colour = "black"),
        panel.grid.major = element_blank(), 
        panel.grid.minor = element_blank(), 
        panel.background = element_blank(), 
@@ -342,7 +338,7 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
         axis.text.y = element_text(size = 9, colour = "black"))+
   theme(legend.position = "bottom", legend.title = element_text(size = 8.5), axis.text = element_text(size = 8.5))+
   facet_wrap(~factor(Parameter, levels=unique(anova_results_int_tuk[[1]]$Parameter)), scales = "free", ncol = 5) +
-  ylab("Concentration (log2)")+
+  ylab("log2")+
   geom_text(x = Inf, y = -Inf, 
             aes(label = paste("p=",`p-value group:sex`)),  
             size = 2.8, 
@@ -353,6 +349,9 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
                         mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   theme(strip.background = element_blank(), strip.text = element_text())
 ```
+
+    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `linewidth` instead.
 
 ![](clinical-chem_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
@@ -390,6 +389,7 @@ bar_chart_fn <- function(data_statistics,
             df=length(conditions$Bioreplicate),lower.tail=F), 
             ci = t.score * sd ) %>% 
   ungroup()
+  
   # prepare data for plotting
   data_plot <- data_statistics %>% 
   left_join(numeric_data) %>% 
@@ -400,20 +400,21 @@ bar_chart_fn <- function(data_statistics,
     left_join(error_bar) 
   
   # reorder data
-  data_plot$Group <- factor(data_plot$Group, levels = c("NG", "HG"))
+  data_plot$Group <- factor(data_plot$Group, levels = c("PNG", "PHG"))
   
   
   # plot
   plot_data <- ggplot(data_plot %>% mutate(Value = 2^Value), aes(x=Group, y=Value))+
   geom_bar(stat = "summary", fun = mean, aes(fill = Group), alpha = 1, color = "black", lwd=0.15,
            width=n_widht/length(unique(data_plot$Group))) + 
-  geom_jitter(size = point_size,  fill = "grey", alpha = 0.8, stroke =0.25, shape = 21, width = jitt_widht)+
+  geom_jitter(size = point_size,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = jitt_widht)+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                 position=position_dodge(0.05)) +
-  scale_fill_manual(values=c('NG' = "#0088AA", 'HG' = "#e95559ff")) +
+  scale_fill_manual(values=c('PNG' = "#0088AA", 'PHG' = "#e95559ff")) +
+  scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
   theme_bw() +
   xlab("") +
-  theme(panel.border = element_rect(size = 1, colour = "black"),
+  theme(panel.border = element_rect(linewidth = 1, colour = "black"),
         axis.title = element_text(size = 9, colour = "black"),
         axis.text = element_text(size = 9, colour = "black"),
         axis.ticks = element_line(colour = "black"),
@@ -436,7 +437,7 @@ bar_chart_fn <- function(data_statistics,
 ``` r
 # plot ratios
 bar_chart_fn(data_statistics = anova_results %>% 
-                                   filter(`p-value group (HG/NG)`<= 0.1),
+                                   filter(`p-value group (PHG/PNG)`<= 0.1),
                               numeric_data = data_stat,
                               point_size = 2,
                               strip_text_size = 9,
@@ -446,16 +447,18 @@ bar_chart_fn(data_statistics = anova_results %>%
                               conditions_data = conditions)+
           ylab("")+
           geom_text(x = Inf, y = -Inf, 
-          aes(label = paste("p=", `p-value group (HG/NG)`)),  
+          aes(label = paste("p=", `p-value group (PHG/PNG)`)),  
             size = 3, 
             hjust = -1.5, 
             angle = 90,
             vjust = -15, 
             data = anova_results %>% 
-            filter(`p-value group (HG/NG)`<= 0.1) %>% 
+            filter(`p-value group (PHG/PNG)`<= 0.1) %>% 
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   facet_wrap(~factor(Parameter, levels=c("Bilirubin (mg/dl)", "Albumin (g/dl)", 
                                          "NEFA (mmol/l)", "Glycerol (mmol/l)", "TG (mg/dl)", "ALT (U/l)")), scales = "free_y", ncol = 2)+
+  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+         fill = guide_legend(order = 1))+
   theme(legend.position = "bottom")+
   theme(plot.margin = margin(1,1,2,-3, "mm"))
 ```
@@ -468,42 +471,35 @@ bar_chart_fn(data_statistics = anova_results %>%
     ## Joining, by = "Bioreplicate"
     ## Joining, by = c("Parameter", "Group")
 
-    ## Warning: Removed 1 rows containing non-finite values (stat_summary).
-
-    ## Warning: Removed 1 rows containing missing values (geom_point).
-
 ![](clinical-chem_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 ``` r
 ggsave("clinicalparameters.svg", width = 3.5, height = 5)
 ```
 
-    ## Warning: Removed 1 rows containing non-finite values (stat_summary).
-    ## Removed 1 rows containing missing values (geom_point).
-
 ### save data in a supplementary tables
 
 ``` r
-if (!file.exists("Supplementary table 3.xlsx")) {
+if (!file.exists("Supplementary table 4.xlsx")) {
   
 # clinical chemical data (all)
-write.xlsx(as.data.frame(clinical_chem_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3A", 
+write.xlsx(as.data.frame(clinical_chem_data), file = "Supplementary table 4.xlsx", sheetName = "Suppl table 4A", 
   col.names = TRUE, row.names = FALSE, append = T)
   
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 4.xlsx", sheetName = "Suppl table 4B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 4.xlsx", sheetName = "Suppl table 4C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3D", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 4.xlsx", sheetName = "Suppl table 4D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3E", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 4.xlsx", sheetName = "Suppl table 4E", 
   col.names = TRUE, row.names = FALSE, append = T)
 }
 ```
