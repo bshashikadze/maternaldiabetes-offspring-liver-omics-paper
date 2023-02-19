@@ -37,7 +37,7 @@ library(protti)
 ### read the main output of DIA-NN
 implicit reading is necessary only if any modifications other than supported by pepquantify package is necessary, e.g. filtering for contaminants
 ```{r message=FALSE, warning=FALSE}
-raw_diann <- read.delim("Liver_DIA_precursors_piglets_3d_old.tsv", sep = "\t", header = T) #can be downloaded from github
+raw_diann <- read.delim("Liver_DIA_precursors_piglets_3d_old.tsv", sep = "\t", header = T)
 ```
 
 
@@ -586,10 +586,10 @@ ggsave("anova_interactions.svg", width = 7.1, height = 8.4)
 ### PCA
 ```{r tidy data}
 # pca function
-pca_fn <- function(data, conditions_file, id_name) {
+pca_fn <- function(data, conditions_file, id_name, scale) {
   
           # caclulate principal components of transposed dataframe
-          PCA <- prcomp(t(data %>% column_to_rownames(id_name)))
+          PCA <- prcomp(scale = scale, t(data %>% column_to_rownames(id_name)))
           
           # export results for ggplot
           # according to https://www.youtube.com/watch?v=0Jp4gsfOLMs (StatQuest: PCA in R)
@@ -606,7 +606,6 @@ pca_fn <- function(data, conditions_file, id_name) {
           # assign conditions
           pca.data <- pca.data %>% 
              left_join(conditions_file) 
-
           # save the data in a list
           pca_data      <- list()
           pca_data[[1]] <- pca.data
@@ -614,9 +613,13 @@ pca_fn <- function(data, conditions_file, id_name) {
           pca_data[[3]] <- loadings
           
           return(pca_data)
-          }
+}
+```
 
-data_pca <- pca_fn(data_stat, conditions, id_name = "Genes")
+
+#### calculate PCs
+```{r}
+data_pca <- pca_fn(data_stat, conditions, id_name = "Genes", scale = F)
 ```
 
 

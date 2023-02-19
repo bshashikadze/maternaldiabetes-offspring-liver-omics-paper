@@ -31,7 +31,7 @@ supported by pepquantify package is necessary, e.g. filtering for
 contaminants
 
 ``` r
-raw_diann <- read.delim("Liver_DIA_precursors_piglets_3d_old.tsv", sep = "\t", header = T) #can be downloaded from github
+raw_diann <- read.delim("Liver_DIA_precursors_piglets_3d_old.tsv", sep = "\t", header = T)
 ```
 
 ### remove contaminants (contaminants fasta file from MaxQuant common contaminants)
@@ -220,7 +220,7 @@ system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_fi
 ```
 
     ##    user  system elapsed 
-    ## 1472.80    4.42 1477.89
+    ## 1564.35    4.34 1569.36
 
 #### save imputed protein groups data
 
@@ -656,10 +656,10 @@ ggsave("anova_interactions.svg", width = 7.1, height = 8.4)
 
 ``` r
 # pca function
-pca_fn <- function(data, conditions_file, id_name) {
+pca_fn <- function(data, conditions_file, id_name, scale) {
   
           # caclulate principal components of transposed dataframe
-          PCA <- prcomp(t(data %>% column_to_rownames(id_name)))
+          PCA <- prcomp(scale = scale, t(data %>% column_to_rownames(id_name)))
           
           # export results for ggplot
           # according to https://www.youtube.com/watch?v=0Jp4gsfOLMs (StatQuest: PCA in R)
@@ -676,7 +676,6 @@ pca_fn <- function(data, conditions_file, id_name) {
           # assign conditions
           pca.data <- pca.data %>% 
              left_join(conditions_file) 
-
           # save the data in a list
           pca_data      <- list()
           pca_data[[1]] <- pca.data
@@ -684,9 +683,13 @@ pca_fn <- function(data, conditions_file, id_name) {
           pca_data[[3]] <- loadings
           
           return(pca_data)
-          }
+}
+```
 
-data_pca <- pca_fn(data_stat, conditions, id_name = "Genes")
+#### calculate PCs
+
+``` r
+data_pca <- pca_fn(data_stat, conditions, id_name = "Genes", scale = F)
 ```
 
     ## Joining, by = "Bioreplicate"
@@ -786,7 +789,7 @@ hmap <- Heatmap(as.matrix(data_HM),
 ht <- draw(hmap)
 ```
 
-![](proteomics_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+![](proteomics_files/figure-gfm/unnamed-chunk-23-1.png)<!-- -->
 
 ``` r
 #calculate actual plot size
