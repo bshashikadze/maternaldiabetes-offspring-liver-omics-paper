@@ -360,7 +360,7 @@ plot_volcano <- ggplot(data_volcano %>%
         guides(shape = "none") +
         guides(size = "none") +
         guides(fill = guide_legend(nrow=3, byrow=TRUE, keyheight=0.15,
-                 default.unit="inch", override.aes=list(shape=21, size = 3)))+
+                 default.unit="inch", override.aes=list(shape=21, size = 2.8)))+
          xlab("log2 fold change (PHG/PNG)")+
          ylab("-log10 p-value")
 ```
@@ -1026,7 +1026,7 @@ plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (PHG
                   seed = 1234, 
                   max.overlaps = Inf) +
   guides(fill = guide_legend(nrow=2, byrow=TRUE, keyheight=0.15,
-                 default.unit="inch", override.aes=list(shape=21)))
+                 default.unit="inch", override.aes=list(shape=21, size = 2.8)))
 ```
 
 
