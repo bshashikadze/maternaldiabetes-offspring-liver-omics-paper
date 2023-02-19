@@ -341,7 +341,7 @@ plot_volcano <- ggplot(data_volcano %>%
          theme_bw()+
          scale_x_continuous(limits = c(-1.9, 1.5), breaks = c(-2,-1.5, -1, -0.5, 0, 0.5, 1, 1.5)) +
          scale_y_continuous(limits = c(0,8), breaks = c(0,2,4,6,8)) +
-         theme(panel.border = element_rect(size = 1, color = "black"), 
+         theme(panel.border = element_rect(linewidth  = 1, color = "black"), 
                panel.grid.major = element_line(), 
                panel.grid.minor = element_blank(),
                axis.text = element_text(size = 9, colour = "black"),
@@ -419,7 +419,7 @@ xlab(paste("PC 1 - ", data_pca[[2]][1], "%", sep=""))+
 ylab(paste("PC 2 - ", data_pca[[2]][2], "%", sep=""))+
 geom_hline(yintercept = 0, linetype = "dashed")+
 geom_vline(xintercept = 0, linetype = "dashed")+
-theme_bw() + theme(panel.border = element_rect(size = 1, colour = "black"), 
+theme_bw() + theme(panel.border = element_rect(linewidth = 1, colour = "black"), 
                    axis.ticks = element_line(colour = "black"),
                    axis.title = element_text(size = 9, colour="black"), 
                    axis.text.x = element_text(size=9, colour="black", vjust = -0.1), 
@@ -617,7 +617,7 @@ plot_vip <- ggplot(data_oplsda[[2]] %>%
 geom_point(size = 3, shape = 21, stroke = 0.25) +
 theme_bw()+
 scale_fill_manual(values = c("#0088AA", "#e95559ff"))+
-theme(panel.border = element_rect(size = 1, color = "black"), 
+theme(panel.border = element_rect(linewidth = 1, color = "black"), 
       panel.grid.major = element_line(), 
       panel.grid.minor = element_blank(), 
       panel.background = element_blank(),
@@ -789,7 +789,7 @@ bar_chart_fn <- function(data_statistics,
   scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
   theme_bw() +
   xlab("") +
-  theme(panel.border = element_rect(size = 1, colour = "black"),
+  theme(panel.border = element_rect(linewidth = 1, colour = "black"),
         axis.title = element_text(size = 9, colour = "black"),
         axis.text = element_text(size = 9, colour = "black"),
         axis.ticks = element_line(colour = "black"),
@@ -999,7 +999,7 @@ plot_corr <- ggplot(data = MIDY_offspring_data, mapping = aes(x=`l2fc group (PHG
                                     "Biogenic Amines"      = "#FB9A99",      
                                     "Sphingolipids"        = "#E31A1C",
                                     "Aminoacids"           = "#B2DF8A"))+
-  theme_bw() + theme(panel.border = element_rect(size = 1, color = "black"), 
+  theme_bw() + theme(panel.border = element_rect(linewidth = 1, color = "black"), 
                panel.grid.major = element_line(), 
                axis.ticks = element_line(color = "black"),
                panel.grid.minor = element_blank(),
@@ -1062,7 +1062,7 @@ ggsave("metabolomics_figure_2.svg", width = 7.1, height = 7.9)
 
 ### save data in a supplementary tables
 ```{r}
-if (!file.exists("Supplementary table 2.xlsx")) {
+if (!file.exists("Supplementary table 3.xlsx")) {
   
 # metabolomics data (all)
 write.xlsx(as.data.frame(metabolomics_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3A", 
