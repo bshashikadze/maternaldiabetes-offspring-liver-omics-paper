@@ -1081,7 +1081,7 @@ write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 3.xlsx"
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]]), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3E", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3E", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios)
