@@ -1,7 +1,7 @@
 ---
 title: "multi-omics analysis"
 author: "BS"
-date: "09/12/2022"
+date: "19/02/2023"
 output: github_document
 ---
 
@@ -44,6 +44,7 @@ data_1_log2 <- read.delim("input/proteingroups_imputed.txt", sep = "\t") %>%
 
 # metabolomics  
 data_2_log2 <- read.delim("input/metabolites.txt", sep = "\t") %>% 
+  filter(Class != "Metabolite ratio") %>% 
   select(-Class) %>% 
   column_to_rownames("Metabolite") %>% 
   log2
@@ -207,7 +208,7 @@ cia_permutation_function <- function() {
 ```{r message=FALSE, warning=FALSE}
 # replicate permutation function (n is number of permutations)
 set.seed(12345)
-n_perm = 500
+n_perm = 200
 RV.rand <- replicate (n = n_perm, cia_permutation_function())
 # store RV-s
 RVs <- c (RV.rand, RV.obs)
@@ -292,12 +293,12 @@ geom_segment(aes(x = Axis1_Proteomics, y = Axis2_Proteomics,
                  data = data_components %>% 
                  pivot_wider(-rowname, names_from = omics, values_from = c(Axis1, Axis2)))+
 scale_shape_manual(values = c('Proteomics' = 16, 'Metabolomics' = 15))+
-scale_color_manual(values = c('HG' = "#e95559ff", 'NG' = "#0088AA"))+
+scale_color_manual(values = c('PHG' = "#e95559ff", 'PNG' = "#0088AA"))+
 xlab(paste("Co-inertia axis 1 - ", (round(Coinertia.plot$mcoa$pseudoeig[1]*100)), "%", sep=""))+
 ylab(paste("Co-inertia axis 2 - ", (round(Coinertia.plot$mcoa$pseudoeig[2]*100)), "%", sep=""))+
 geom_hline(yintercept = 0, linetype = "dashed")+
 geom_vline(xintercept = 0, linetype = "dashed")+
-theme_bw() + theme(panel.border = element_rect(size = 1),
+theme_bw() + theme(panel.border = element_rect(linewidth =  1),
                    axis.title = element_text(size  = 9, colour="black"), 
                    axis.text.x = element_text(size = 9, colour="black"), 
                    axis.text.y = element_text(size = 9, colour="black"),
