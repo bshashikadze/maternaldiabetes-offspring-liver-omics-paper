@@ -1,0 +1,42 @@
+Here, we present the predicted diseases with relative FDR calculated by applying a Fisher's exact test + Benjamini Hochberg correction for multiple comparisons of the disease-associated genes and the genes associated with each condition in human
+Condition,Disease,FDR
+Upregulated core 1,Propionicaciduria,0.00039359823098322993
+Upregulated core 1,Propionic acidemia,0.00039359823098322993
+Upregulated core 2,Influenza,4.9001585449263325e-08
+Expanded upregulated network,Multiple Acyl Coenzyme A Dehydrogenase Deficiency,0.004067198750230332
+"Expanded upregulated network,""Biliary Cirrhosis, Primary, 1"",0.034276649813813224"
+Expanded upregulated network,Finding of Mean Corpuscular Hemoglobin,0.0002230432302297612
+Expanded upregulated network,Classic Maple Syrup Urine Disease,0.022122001681034054
+"Expanded upregulated network,""Vasospasm, Intracranial"",0.022122001681034054"
+Expanded upregulated network,Glutaric Aciduria IIA,0.004067198750230332
+Expanded upregulated network,Cerebral Vasospasm,0.022122001681034054
+Expanded upregulated network,Alloxan Diabetes,0.012938065622967765
+Expanded upregulated network,Osteoarthrosis Deformans,0.00028526666477440913
+Expanded upregulated network,AICARDI-GOUTIERES SYNDROME,0.022122001681034054
+Expanded upregulated network,Ischemic stroke,0.012093420323581067
+Expanded upregulated network,Glutaric Aciduria IIC,0.004067198750230332
+Expanded upregulated network,Mycoplasma-Induced Stevens-Johnson Syndrome,0.0012446088331365933
+Expanded upregulated network,Intermittent Maple Syrup Urine Disease,0.022122001681034054
+Expanded upregulated network,Undifferentiated carcinoma,0.0015276671407023622
+Expanded upregulated network,Secondary Biliary Cholangitis,0.034276649813813224
+"Expanded upregulated network,""Arthritis, Adjuvant-Induced"",0.004067198750230332"
+Expanded upregulated network,Malignant neoplasm of breast,0.011081702940441954
+Expanded upregulated network,Carcinomatosis,0.0015276671407023622
+Expanded upregulated network,Glutaric Aciduria IIB,0.004067198750230332
+"Expanded upregulated network,""Mammary Carcinoma, Animal"",0.004238079234848101"
+Expanded upregulated network,Brain hemorrhage,0.011336708580696986
+Expanded upregulated network,Anaplastic carcinoma,0.0015276671407023622
+Expanded upregulated network,Drug-Induced Stevens Johnson Syndrome,0.0012446088331365933
+Expanded upregulated network,Maple Syrup Urine Disease,0.022122001681034054
+Expanded upregulated network,Pigmented Basal Cell Carcinoma,0.04841332482825182
+"Expanded upregulated network,""Carcinoma, Spindle-Cell"",0.0015276671407023622"
+"Expanded upregulated network,""Arthritis, Experimental"",0.004067198750230332"
+Expanded upregulated network,Influenza,2.98471500502453e-37
+Expanded upregulated network,Erythrocyte Mean Corpuscular Hemoglobin Test,0.0002230432302297612
+Expanded upregulated network,Stevens-Johnson Syndrome Toxic Epidermal Necrolysis Spectrum,0.0012446088331365933
+"Expanded upregulated network,""Arthritis, Collagen-Induced"",0.004067198750230332"
+Expanded upregulated network,Animal Mammary Neoplasms,0.004238079234848101
+"Expanded upregulated network,""Maple Syrup Urine Disease, Thiamine Responsive"",0.022122001681034054"
+Expanded downregulated network,Colorectal Carcinoma,0.0022648017266355745
+"Expanded downregulated network,""EAR, PATELLA, SHORT STATURE SYNDROME"",0.0010329259457984722"
+Expanded downregulated network,Sclerocystic Ovaries,0.0026252527479582403
