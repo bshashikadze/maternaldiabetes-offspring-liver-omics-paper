@@ -8,4 +8,4 @@ The proteomics dataset has been submitted to the [ProteomeXchange](http://www.pr
 
 
 Associated repo:
-(missing value imputation methods)[https://github.com/bshashikadze/missing-value-imputation-methods]
+[missing value imputation methods](https://github.com/bshashikadze/missing-value-imputation-methods)
