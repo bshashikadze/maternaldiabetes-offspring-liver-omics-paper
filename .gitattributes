@@ -1,4 +1,4 @@
 *.md linguist-detectable=true
 README.md linguist-detectable=false
 readme.md linguist-detectable=false
-notebooks/** linguist-vendored
+PPI network integration.ipynb linguist-detectable=false
