@@ -10,4 +10,4 @@
 *.Rmd	text
 *.R  	text
 
-*.[Rr]md  linguist-detectable
+*.Rmd  linguist-detectable
