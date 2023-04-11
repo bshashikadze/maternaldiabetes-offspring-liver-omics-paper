@@ -7,12 +7,13 @@ BS
 
 ``` r
 library(tidyverse)
+library(ggpubr)
 ```
 
 ## load data
 
 ``` r
-rel_liver_weight  <- read.delim("Liver_weight.txt", sep = "\t", header = T) 
+weight            <- read.delim("weight.txt", sep = "\t", header = T) 
 conditions        <- read.delim("Conditions.txt", sep = "\t", header = T)
 ```
 
@@ -76,7 +77,7 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
 ##### significance of metabolite changes with 2 way anova
 
 ``` r
-anova_results <- two_way_anova_fn(data = rel_liver_weight, id_name = "Parameter", conditions_file = conditions, adjust_p_value = F,  add_l2fc = F)
+anova_results <- two_way_anova_fn(data = weight, id_name = "Parameter", conditions_file = conditions, adjust_p_value = F,  add_l2fc = F)
 ```
 
     ## Joining, by = "Bioreplicate"
@@ -146,7 +147,7 @@ bar_chart_fn <- function(data_statistics,
   theme(strip.text = element_text(size = strip_text_size),
         strip.background = element_blank(),
         legend.margin=margin(0,0,0,0), 
-        legend.box.margin=margin(-12,-12,-3,-12)) 
+        legend.box.margin=margin(-10,-10,-3,-10)) 
   
   
   return(plot_data)
@@ -158,17 +159,17 @@ bar_chart_fn <- function(data_statistics,
 #### plot data
 
 ``` r
-# plot ratios
-bar_chart_fn(data_statistics = anova_results,
-                            numeric_data = rel_liver_weight, 
+# plot body weight
+body_w <- bar_chart_fn(data_statistics = anova_results %>% filter(Parameter == "Body weight (kg)"),
+                            numeric_data = weight, 
                             point_size = 2, 
                             strip_text_size = 9,
                             n_widht = 0.8, 
                             jitt_widht = 0.05,
                             id_name = "Parameter", 
                             conditions_data = conditions)+
-            ylab("Rel. liver weight [%]")+
-  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+            ylab("Body weight [kg]")+
+  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
          fill = guide_legend(order = 1))+
   theme(legend.position = "bottom")
 ```
@@ -184,8 +185,37 @@ bar_chart_fn(data_statistics = anova_results,
     ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
     ## ℹ Please use `linewidth` instead.
 
+``` r
+# plot liver weight
+rel_liver_w <- bar_chart_fn(data_statistics = anova_results %>% filter(Parameter == "Rel_liver_weight"),
+                            numeric_data = weight, 
+                            point_size = 2, 
+                            strip_text_size = 9,
+                            n_widht = 0.8, 
+                            jitt_widht = 0.05,
+                            id_name = "Parameter", 
+                            conditions_data = conditions)+
+            ylab("Rel. liver weight [%]")+
+  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
+         fill = guide_legend(order = 1))+
+  theme(legend.position = "bottom")
+```
+
+    ## Joining, by = "Parameter"
+    ## Joining, by = "Bioreplicate"
+    ## `summarise()` has grouped output by 'Parameter'. You can override using the
+    ## `.groups` argument.
+    ## Joining, by = "Parameter"
+    ## Joining, by = "Bioreplicate"
+    ## Joining, by = c("Parameter", "Group")
+
+``` r
+# combine plots
+ggarrange(body_w, rel_liver_w, common.legend = T, legend = "bottom", labels = c("A", "B"), font.label = list(size = 17))
+```
+
 ![](general_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
 ``` r
-ggsave("liver_weight.svg", width = 3, height = 3)
+ggsave("weights.svg", width = 4, height = 2.5)
 ```
