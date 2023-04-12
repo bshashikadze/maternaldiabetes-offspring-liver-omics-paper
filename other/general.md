@@ -104,8 +104,8 @@ bar_chart_fn <- function(data_statistics,
   pivot_longer(names_to = "Bioreplicate", values_to = "Value", -all_of(id_name)) %>% 
   left_join(conditions_data) %>% 
   group_by(!!as.symbol(id_name), Group) %>% 
-  summarise(mean = mean(100*Value, na.rm=T), 
-            sd = sd(100*Value, na.rm=T), 
+  summarise(mean = mean(Value, na.rm=T), 
+            sd = sd(Value, na.rm=T), 
             n = n(),
             sem = sd/sqrt(n),
             t.score = qt(p=0.05/2, 
@@ -127,7 +127,7 @@ bar_chart_fn <- function(data_statistics,
   
   
   # plot
-  plot_data <- ggplot(data_plot, aes(x=Group, y=100*Value))+
+  plot_data <- ggplot(data_plot, aes(x=Group, y=Value))+
   geom_bar(stat = "summary", fun = mean, aes(fill = Group), alpha = 1, color = "black", lwd=0.15,
            width=n_widht/length(unique(data_plot$Group))) + 
   geom_jitter(size = point_size,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = jitt_widht)+
@@ -195,7 +195,7 @@ rel_liver_w <- bar_chart_fn(data_statistics = anova_results %>% filter(Parameter
                             jitt_widht = 0.05,
                             id_name = "Parameter", 
                             conditions_data = conditions)+
-            ylab("Rel. liver weight [%]")+
+            ylab("Rel. liver weight")+
   guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
          fill = guide_legend(order = 1))+
   theme(legend.position = "bottom")
