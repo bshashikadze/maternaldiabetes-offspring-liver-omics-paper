@@ -398,7 +398,6 @@ bar_chart_fn <- function(data_statistics,
 }
 ```
 
-
 #### plot data
 ```{r}
 # plot ratios
