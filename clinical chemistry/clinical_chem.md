@@ -457,7 +457,7 @@ bar_chart_fn(data_statistics = anova_results %>%
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
   facet_wrap(~factor(Parameter, levels=c("Bilirubin (mg/dl)", "Albumin (g/dl)", 
                                          "NEFA (mmol/l)", "Glycerol (mmol/l)", "TG (mg/dl)", "ALT (U/l)")), scales = "free_y", ncol = 2)+
-  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+  guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
          fill = guide_legend(order = 1))+
   theme(legend.position = "bottom")+
   theme(plot.margin = margin(1,1,2,-3, "mm"))
