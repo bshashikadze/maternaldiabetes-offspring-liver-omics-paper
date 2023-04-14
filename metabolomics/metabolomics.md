@@ -20,7 +20,7 @@ library(xlsx)
 
 ``` r
 metabolomics_data <- read.delim("metabolites.txt", sep = "\t", header = T) 
-conditions        <- read.delim("Conditions.txt", sep = "\t", header = T)
+conditions        <- read.delim("Conditions.txt",  sep = "\t", header = T)
 ```
 
 ### clean-up data
@@ -448,7 +448,7 @@ theme_bw() + theme(panel.border = element_rect(linewidth = 1, colour = "black"),
                    axis.text.y = element_text(size = 9, colour="black"),
 panel.grid.major = element_line(), panel.grid.minor = element_blank())+
 theme(legend.title = element_text(colour="black", size=9))+
-guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
        col = guide_legend(order = 1))+
   theme(legend.position = "top", 
         legend.box.spacing = unit(0.8, 'mm'), 
@@ -916,7 +916,7 @@ plot_ratios <- bar_chart_fn(data_statistics = anova_results_ratios %>%
             filter(`Adjusted p-value group (PHG/PNG)` <= 0.05)  %>% 
             mutate(across(where(is.numeric), round, 3)), inherit.aes = F) +
             facet_wrap(~factor(Metabolite, levels=c("PC ae [pmol/mg]", "PUFA (PC) / MUFA (PC)", "SM [pmol/mg]")), scales = "free_y", ncol = 3)+ 
-            guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+            guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
             fill = guide_legend(order = 1))+
             theme(legend.position = "bottom")+
             theme(plot.margin = margin(1,2,-5,-2, "mm"))
@@ -956,7 +956,7 @@ plot_other_sig <- bar_chart_fn(data_statistics = anova_results_group %>% filter(
                                           'SDMA',
                                           'ADMA')), scales = "free_y", ncol = 3)+
   theme(legend.position = c(0.85, 0.2))+
-  guides(fill=guide_legend(nrow=2, byrow=TRUE, order = 1), shape = guide_legend(override.aes = list(stroke = 1, shape  = c(0,1))))+
+  guides(fill=guide_legend(nrow=2, byrow=TRUE, order = 1), shape = guide_legend(override.aes = list(stroke = 1, shape  = c(1,0))))+
   theme(plot.margin = margin(1,2,-5,3, "mm"))
 ```
 
