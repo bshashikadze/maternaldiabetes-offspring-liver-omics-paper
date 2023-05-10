@@ -1,7 +1,7 @@
-Other
+weight and HOMA-IR
 ================
 BS
-2023-02-03
+10/05/2023
 
 ## load libraries
 
@@ -15,6 +15,7 @@ library(ggpubr)
 ``` r
 weight            <- read.delim("weight.txt", sep = "\t", header = T) 
 conditions        <- read.delim("Conditions.txt", sep = "\t", header = T)
+HOMA_IR           <- read.delim("HOMA_IR.txt", sep = "\t", header = T)
 ```
 
 ## differential abundance analysis using 2 way ANOVA
@@ -80,11 +81,27 @@ two_way_anova_fn <- function(data, id_name, conditions_file, adjust_p_value, p_a
 anova_results <- two_way_anova_fn(data = weight, id_name = "Parameter", conditions_file = conditions, adjust_p_value = F,  add_l2fc = F)
 ```
 
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Bioreplicate)`
+
+    ## Warning: Returning more (or less) than 1 row per `summarise()` group was deprecated in
+    ## dplyr 1.1.0.
+    ## ℹ Please use `reframe()` instead.
+    ## ℹ When switching from `summarise()` to `reframe()`, remember that `reframe()`
+    ##   always returns an ungrouped data frame and adjust accordingly.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
     ## `summarise()` has grouped output by 'Parameter'. You can override using the
     ## `.groups` argument.
 
+    ## Warning: Specifying the `id_cols` argument by position was deprecated in tidyr 1.3.0.
+    ## ℹ Please explicitly name `id_cols`, like `id_cols = all_of(id_name)`.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
 ### plot results
+
+#### define function which performs plotting
 
 ``` r
 bar_chart_fn <- function(data_statistics, 
@@ -174,16 +191,13 @@ body_w <- bar_chart_fn(data_statistics = anova_results %>% filter(Parameter == "
   theme(legend.position = "bottom")
 ```
 
-    ## Joining, by = "Parameter"
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Parameter)`
+    ## Joining with `by = join_by(Bioreplicate)`
     ## `summarise()` has grouped output by 'Parameter'. You can override using the
     ## `.groups` argument.
-    ## Joining, by = "Parameter"
-    ## Joining, by = "Bioreplicate"
-    ## Joining, by = c("Parameter", "Group")
-
-    ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-    ## ℹ Please use `linewidth` instead.
+    ## Joining with `by = join_by(Parameter)`
+    ## Joining with `by = join_by(Bioreplicate)`
+    ## Joining with `by = join_by(Parameter, Group)`
 
 ``` r
 # plot liver weight
@@ -201,13 +215,13 @@ rel_liver_w <- bar_chart_fn(data_statistics = anova_results %>% filter(Parameter
   theme(legend.position = "bottom")
 ```
 
-    ## Joining, by = "Parameter"
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Parameter)`
+    ## Joining with `by = join_by(Bioreplicate)`
     ## `summarise()` has grouped output by 'Parameter'. You can override using the
     ## `.groups` argument.
-    ## Joining, by = "Parameter"
-    ## Joining, by = "Bioreplicate"
-    ## Joining, by = c("Parameter", "Group")
+    ## Joining with `by = join_by(Parameter)`
+    ## Joining with `by = join_by(Bioreplicate)`
+    ## Joining with `by = join_by(Parameter, Group)`
 
 ``` r
 # combine plots
@@ -218,4 +232,67 @@ ggarrange(body_w, rel_liver_w, common.legend = T, legend = "bottom", labels = c(
 
 ``` r
 ggsave("weights.svg", width = 4, height = 2.5)
+```
+
+## HOMA-IR (Homeostatic Model Assessment for Insulin Resistance)
+
+``` r
+# make grouping
+HOMA_IR_tidy <- HOMA_IR %>% 
+  mutate(Group_c = str_c(Group, " (", str_to_lower(Sex), ")"))
+
+
+# error bars
+error_bar_lipid <- HOMA_IR_tidy %>% 
+  group_by(Group_c) %>% 
+  summarise(mean = mean(HOMA_IR, na.rm=T), 
+            sd = sd(HOMA_IR, na.rm=T)) %>% 
+  ungroup()
+  
+# prepare data for plotting
+  HOMA_IR_tidy <-  HOMA_IR_tidy %>% 
+    left_join(error_bar_lipid) 
+```
+
+    ## Joining with `by = join_by(Group_c)`
+
+``` r
+# which comparisons will be displayed
+IR_comparisons <- list(c("PNG (f)", "PHG (f)"), c("PNG (m)", "PHG (m)"),  c("PNG (f)", "PNG (m)"), c("PHG (f)", "PHG (m)"))
+
+
+# make new group order 
+HOMA_IR_tidy$Group_c <- factor(HOMA_IR_tidy$Group_c, levels = c("PNG (m)", "PHG (m)", "PNG (f)", "PHG (f)"))
+
+
+# plot
+ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
+  geom_bar(stat = "summary", fun = mean, aes(fill = Group_c), alpha = 1, color = "black", lwd=0.15,
+           width=2.19/length(unique(HOMA_IR_tidy$Group_c))) + 
+  geom_jitter(size = 2,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = 0.1)+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                position=position_dodge(0.05)) +
+  scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
+  scale_fill_manual(values=c("PNG (f)" = "#0088AA", "PHG (f)" = "#e95559ff", "PNG (m)" = "#0088AA", "PHG (m)" = "#e95559ff")) +
+  theme_bw() +
+  ylab("") +
+  xlab("") +
+  ggtitle("HOMA-IR")+
+  scale_y_continuous(breaks = c(0,1,2,3), limits = c(0,3))+
+  theme(panel.border = element_rect(linewidth = 1, color = "black"), plot.title = element_text(size = 8.5, hjust = 0.5),
+        axis.text = element_text(size=10, color = "black"),
+        axis.title.x = element_text(size = 10), 
+        axis.title.y = element_text(size = 10)) +
+ stat_compare_means(comparisons = IR_comparisons, method = "t.test", method.args = list(var.equal = TRUE),
+                     size = 2.1, label = "p.format")+
+                      theme(legend.position = "none")+
+  theme(plot.margin = margin(1,1,-2,1, "mm"))
+```
+
+    ## [1] FALSE
+
+![](general_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+``` r
+  ggsave("homa_ir.pdf", width = 3, height = 2.44)
 ```
