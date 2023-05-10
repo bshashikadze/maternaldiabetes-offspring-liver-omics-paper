@@ -707,7 +707,6 @@ ggsave("DAG_TAG.pdf", width = 7.1/2, height = 2.5)
 ### combine plots
 #### main figure
 ```{r}
-p0     <- rectGrob(width = 1, height = 1)
 plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("A", "B"), font.label = list(size = 17),
           ncol = 2, nrow = 1, widths = c(3.4,3.4), heights = c(3.4,3.4))
 plot_2 <- plot_grid(plot_oplsda, plot_vip, ncol = 2, rel_widths = c(7.1/2, 7.1/2), rel_heights = c(3.35, 3.35), labels = c('D','E'), label_size = 17)
