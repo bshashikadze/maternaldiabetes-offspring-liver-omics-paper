@@ -655,12 +655,12 @@ bar_chart_fn <- function(data_statistics,
   theme_bw() +
   xlab("") +
   theme(panel.border = element_rect(linewidth = 1, colour = "black"),
-        axis.title = element_text(size = 9, colour = "black"),
-        axis.text = element_text(size = 9, colour = "black"),
+        axis.title = element_text(size = 10, colour = "black"),
+        axis.text = element_text(size = 10, colour = "black"),
         axis.ticks = element_line(colour = "black"),
         legend.box.spacing = unit(0.8, 'mm'), 
         legend.title = element_blank(), 
-        legend.text = element_text(size = 8))+
+        legend.text = element_text(size = 10))+
   theme(strip.text = element_text(size = strip_text_size),
         strip.background = element_blank(),
         legend.margin=margin(0,0,0,0), 
@@ -681,7 +681,7 @@ plot_class <- bar_chart_fn(data_statistics = anova_results_class %>% filter(Lipi
                             numeric_data = data_stat_class, n_widht = 0.95, 
                             jitt_widht = 0.1,  
                             point_size = 2, 
-                            strip_text_size = 9,
+                            strip_text_size = 10,
                             id_name = "Lipid", 
                             conditions_data = conditions) +
             ylab("")+
@@ -698,7 +698,7 @@ plot_class <- bar_chart_fn(data_statistics = anova_results_class %>% filter(Lipi
   theme(legend.position = "bottom")+
   guides(fill=guide_legend(nrow=1, byrow=TRUE, order = 1), 
          shape = guide_legend(override.aes = list(stroke = 1, shape  = c(1,0))))
-ggsave("DAG_TAG.pdf", width = 7.1/2, height = 2.5)
+ggsave("DAG_TAG.pdf", width = 3.8, height = 2.5)
 ```
 
 ## save results
@@ -706,11 +706,12 @@ ggsave("DAG_TAG.pdf", width = 7.1/2, height = 2.5)
 ### combine plots
 #### main figure
 ```{r}
-plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("A", "B"), font.label = list(size = 17),
+plot_0 <- ggarrange(NA, plot_volcano, ncol = 1, nrow = 2, widths = c(3.4,3.4), heights = c(0.11,3))
+plot_1 <- ggarrange(plot_pca, plot_0, labels = c("A", "B"), font.label = list(size = 17),
           ncol = 2, nrow = 1, widths = c(3.4,3.4), heights = c(3.4,3.4))
-plot_2 <- plot_grid(plot_oplsda, plot_vip, ncol = 2, rel_widths = c(7.1/2, 7.1/2), rel_heights = c(3.35, 3.35), labels = c('D','E'), label_size = 17)
+plot_2 <- plot_grid(plot_oplsda, plot_vip, ncol = 2, rel_widths = c(7.1/2, 7.1/2), rel_heights = c(3.35, 3.35), labels = c('C','D'), label_size = 17)
 plot_3 <- plot_grid(plot_1, plot_2, nrow = 2, rel_widths = c(3.4, 3.4), rel_heights = c(3.4, 3.4))
-ggsave("lipidomics_main.svg", width = 7.1, height = 2*3.4)
+ggsave("lipidomics_suppl.svg", width = 7.1, height = 2*3.4)
 ```
 
 
