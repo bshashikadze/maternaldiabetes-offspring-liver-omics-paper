@@ -280,14 +280,14 @@ ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
   ggtitle("HOMA-IR")+
   scale_y_continuous(breaks = c(0,1,2,3), limits = c(0,3))+
   theme(panel.border = element_rect(linewidth  = 1, colour = "black"),
-        axis.title = element_text(size = 9, colour = "black"),
-        axis.text = element_text(size = 9, colour = "black"),
+        axis.title = element_text(size =10, colour = "black"),
+        axis.text = element_text(size = 10, colour = "black"),
         axis.ticks = element_line(colour = "black"),
-        plot.title = element_text(size = 8.5, hjust = 0.5),
+        plot.title = element_text(size = 10, hjust = 0.5),
         axis.title.x = element_text(size = 10), 
         axis.title.y = element_text(size = 10)) +
    stat_compare_means(comparisons = IR_comparisons, method = "t.test", method.args = list(var.equal = TRUE),
-                     size = 2.5, label = "p.format")+
+                     size = 3, label = "p.format")+
                       theme(legend.position = "none")+
   theme(plot.margin = margin(1,1,-2,1, "mm"))
 ```
@@ -297,5 +297,5 @@ ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
 ![](general_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ``` r
-  ggsave("homa_ir.pdf", width = 2.8, height = 2.423)
+  ggsave("homa_ir.pdf", width = 2.8, height = 2.45)
 ```
