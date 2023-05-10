@@ -811,7 +811,7 @@ plot_class <- bar_chart_fn(data_statistics = anova_results_class %>% filter(Lipi
     ##   across(a:b, \(x) mean(x, na.rm = TRUE))
 
 ``` r
-ggsave("DAG_TAG.pdf", width = 3.8, height = 2.5)
+ggsave("DAG_TAG.pdf", width = 4, height = 2.75)
 ```
 
 ## save results
