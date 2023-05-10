@@ -759,7 +759,6 @@ bar_chart_fn <- function(data_statistics,
   
   return(plot_data)
  
- 
 }
 ```
 
