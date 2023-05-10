@@ -227,7 +227,7 @@ HOMA_IR_tidy$Group_c <- factor(HOMA_IR_tidy$Group_c, levels = c("PNG (m)", "PHG 
 # plot
 ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
   geom_bar(stat = "summary", fun = mean, aes(fill = Group_c), alpha = 1, color = "black", lwd=0.15,
-           width=2.19/length(unique(HOMA_IR_tidy$Group_c))) + 
+           width=2.1/length(unique(HOMA_IR_tidy$Group_c))) + 
   geom_jitter(size = 2,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = 0.1)+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                 position=position_dodge(0.05)) +
@@ -238,15 +238,18 @@ ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
   xlab("") +
   ggtitle("HOMA-IR")+
   scale_y_continuous(breaks = c(0,1,2,3), limits = c(0,3))+
-  theme(panel.border = element_rect(linewidth = 1, color = "black"), plot.title = element_text(size = 8.5, hjust = 0.5),
-        axis.text = element_text(size=10, color = "black"),
+  theme(panel.border = element_rect(linewidth  = 1, colour = "black"),
+        axis.title = element_text(size = 9, colour = "black"),
+        axis.text = element_text(size = 9, colour = "black"),
+        axis.ticks = element_line(colour = "black"),
+        plot.title = element_text(size = 8.5, hjust = 0.5),
         axis.title.x = element_text(size = 10), 
         axis.title.y = element_text(size = 10)) +
- stat_compare_means(comparisons = IR_comparisons, method = "t.test", method.args = list(var.equal = TRUE),
-                     size = 2.1, label = "p.format")+
+   stat_compare_means(comparisons = IR_comparisons, method = "t.test", method.args = list(var.equal = TRUE),
+                     size = 2.5, label = "p.format")+
                       theme(legend.position = "none")+
   theme(plot.margin = margin(1,1,-2,1, "mm"))
-  ggsave("homa_ir.pdf", width = 3, height = 2.44)
+  ggsave("homa_ir.pdf", width = 2.8, height = 2.423)
 ```
 
 
