@@ -66,17 +66,36 @@ precursors_diann_3d_old <- pepquantify::read_diann(Q_Val = 0.01,
 
     ## [1] "R is located in C:/Users/shashikadze/Documents/GitHub/maternaldiabetes-offspring-liver-omics-paper/proteomics, if this path is wrong, change it from R studio, or by specifying the correct path using the directory command e.g. directory = name_of_the_path"
     ## [1] "file, with the name DIA_precursors_nocontaminants.tsv is currently loading"
+
+    ## Warning: Specifying the `id_cols` argument by position was deprecated in tidyr 1.3.0.
+    ## ℹ Please explicitly name `id_cols`, like `id_cols = c(dplyr::all_of(id_column),
+    ##   "Stripped.Sequence")`.
+    ## ℹ The deprecated feature was likely used in the pepquantify package.
+    ##   Please report the issue to the authors.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
     ## [1] "in the peptide output modifications will be included (so far (v.2.1.2) only works for Carbamidomethyl(C))"
 
-    ## Joining, by = "Genes"
-    ## Joining, by = "Stripped.Sequence"
-    ## Joining, by = "Stripped.Sequence"
-    ## Joining, by = "Stripped.Sequence"
-    ## Joining, by = "Stripped.Sequence"
-    ## Joining, by = "Genes"
-    ## Joining, by = "Genes"
+    ## Joining with `by = join_by(Genes)`
+    ## Joining with `by = join_by(Stripped.Sequence)`
+    ## Joining with `by = join_by(Stripped.Sequence)`
+    ## Joining with `by = join_by(Stripped.Sequence)`
+    ## Joining with `by = join_by(Stripped.Sequence)`
 
-    ## the following files were saved in the txt folder:
+    ## Warning: Specifying the `id_cols` argument by position was deprecated in tidyr 1.3.0.
+    ## ℹ Please explicitly name `id_cols`, like `id_cols = dplyr::all_of(id_column)`.
+    ## ℹ The deprecated feature was likely used in the pepquantify package.
+    ##   Please report the issue to the authors.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+    ## Joining with `by = join_by(Genes)`
+    ## Joining with `by = join_by(Genes)`
+
+    ## the following files were saved in the output folder:
     ##     1 - diann_output_filtered;
     ##     2 - peptides;
     ##     3 - proteingroups.
@@ -127,7 +146,7 @@ seq_cov <- seq_cov %>%
   summarise(coverage = max(coverage))
 ```
 
-    ## Joining, by = "Stripped.Sequence"
+    ## Joining with `by = join_by(Stripped.Sequence)`
 
 ## load conditions file
 
@@ -165,7 +184,7 @@ proteingroups_reordered_suppl <- proteingroups_reordered %>%
           write.table("proteingroups.txt", sep = "\t", row.names = F, quote = F)
 ```
 
-    ## Joining, by = "Genes"
+    ## Joining with `by = join_by(Genes)`
 
 #### count percentage of missing values
 
@@ -215,12 +234,15 @@ rm(n_total_afterfiltering, n_missing_afterfiltering, perc_missing_afterfiltering
 ### missing value imputation
 
 ``` r
+# as it takes long time execute only if the imputed file does not exists
+if (!exists("data_imputed_RF")) {
 set.seed(12345)
 system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_filtered)))
+}
 ```
 
     ##    user  system elapsed 
-    ## 1564.35    4.34 1569.36
+    ## 1447.54    3.08 1451.22
 
 #### save imputed protein groups data
 
@@ -303,7 +325,7 @@ l2fc_group <- fc_function(data_stat, condition = "Group", conditions_data = cond
                           compared_to  = "PHG", values_log= T, id_name = "Genes")
 ```
 
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Bioreplicate)`
     ## `summarise()` has grouped output by 'Genes'. You can override using the
     ## `.groups` argument.
 
@@ -314,7 +336,7 @@ l2fc_sex <- fc_function(data_stat, condition = "Sex", conditions_data = conditio
                           compared_to  = "F", values_log= T, id_name = "Genes")
 ```
 
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Bioreplicate)`
     ## `summarise()` has grouped output by 'Genes'. You can override using the
     ## `.groups` argument.
 
@@ -328,7 +350,7 @@ l2fc_genes <- l2fc_group %>%
   rename("l2fc sex (F/M)" = l2fc) 
 ```
 
-    ## Joining, by = "Genes"
+    ## Joining with `by = join_by(Genes)`
 
 ### 2 way anova
 
@@ -396,10 +418,25 @@ anova_results <- two_way_anova_fn(data = data_stat, id_name = "Genes",
                                   l2fc=l2fc_genes)
 ```
 
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Bioreplicate)`
+
+    ## Warning: Returning more (or less) than 1 row per `summarise()` group was deprecated in
+    ## dplyr 1.1.0.
+    ## ℹ Please use `reframe()` instead.
+    ## ℹ When switching from `summarise()` to `reframe()`, remember that `reframe()`
+    ##   always returns an ungrouped data frame and adjust accordingly.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
     ## `summarise()` has grouped output by 'Genes'. You can override using the
     ## `.groups` argument.
-    ## Joining, by = "Genes"
+
+    ## Warning: Specifying the `id_cols` argument by position was deprecated in tidyr 1.3.0.
+    ## ℹ Please explicitly name `id_cols`, like `id_cols = all_of(id_name)`.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+    ## Joining with `by = join_by(Genes)`
 
 #### clean-up anova results
 
@@ -527,11 +564,11 @@ anova_results_int_tuk <- tkhsd_fn(data = anova_results_int,  id_name = "Genes",
                                   conditions_file = conditions) 
 ```
 
-    ## Joining, by = "Genes"
-    ## Joining, by = "Bioreplicate"
-    ## Joining, by = "Genes"
-    ## Joining, by = "Genes"
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Genes)`
+    ## Joining with `by = join_by(Bioreplicate)`
+    ## Joining with `by = join_by(Genes)`
+    ## Joining with `by = join_by(Genes)`
+    ## Joining with `by = join_by(Bioreplicate)`
     ## `summarise()` has grouped output by 'Genes'. You can override using the
     ## `.groups` argument.
 
@@ -545,10 +582,18 @@ data_volcano <- anova_results %>%
                 `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) | `Adjusted p-value group (PHG/PNG)` < 0.05 & 
                 `l2fc group (PHG/PNG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
                 diff_abundant = case_when(
-                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) ~ "Increased_in_PHG",
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5)  ~ "Increased_in_PHG",
                 `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` < -log2(1.5) ~ "Decreased_in_PHG",
              TRUE ~ "n.s."
-           )) 
+           )) %>% 
+  mutate(Process = case_when(Genes == "ABCB4"|Genes =="LTA4H"|Genes =="CHDH"|
+                             Genes =="CHKA"|Genes =="PCYT2"|Genes =="CHPT1"|
+                             Genes =="MAT2A"|Genes =="PLA2G4A"|Genes =="PEMT"|Genes =="BHMT"|
+                             Genes =="LPCAT3" ~ "PC homeostasis", 
+                             Genes == "ACACA"|Genes == "FASN"|Genes == "DGAT1" ~ "Lipogenesis",
+                             Genes == "ACSL6"|Genes == "ACADL"|Genes == "ACADVL"|Genes == "HADHA"|Genes == "HADHB" ~ "Beta-oxidation", 
+                             Genes == "PCK1" ~ "Gluconeogenesis",
+                             Genes == "TAT"  ~ "AA metabolism", TRUE ~ "n.d."))
 ```
 
 ### plot volcano plot
@@ -557,22 +602,21 @@ data_volcano <- anova_results %>%
 plot_volcano <- ggplot(data_volcano %>%                       
                        arrange(desc(diff_abundant)), 
                        mapping = aes(x = `l2fc group (PHG/PNG)`, y = -log10(`p-value group (PHG/PNG)`), 
-                                     fill=diff_abundant, label = Genes, 
-                                     alpha = diff_abundant))+
-         geom_point(aes(shape =diff_abundant, size = diff_abundant), stroke = 0.25)+
-         scale_shape_manual(values = c(n.s. = 16, Decreased_in_PHG =21, Increased_in_PHG =21))+
-         scale_size_manual(values=c(n.s. = 1, Decreased_in_PHG =1.6, Increased_in_PHG =1.6))+
-         scale_fill_manual(values=c("n.s." = "#999999", 
-                                    "Decreased_in_PHG"= "#0088AA", "Increased_in_PHG"="#e95559ff"))+
-         scale_alpha_manual(values= c("n.s." = 0.3, "Decreased_in_PHG"= 1, "Increased_in_PHG"= 1))+
+                                     label = Genes))+
+         geom_point(shape = 20, alpha= 0.8, color = "grey", stroke = 0.25, size = 1.2)+
+         scale_color_manual(values=c("PC homeostasis"  = "#6A3D9A", 
+                                    "Gluconeogenesis"  = "#009E73",      
+                                    "Beta-oxidation"   = "#E31A1C",
+                                    "AA metabolism"    = "#B2DF8A",
+                                    "Lipogenesis"      = "#0072B2"))+
+         geom_hline(yintercept = -log10(0.001976451))+
          geom_text_repel(data = subset(data_volcano, 
-                                       significant == "+" & `l2fc group (PHG/PNG)` > 0.6 | significant == "+"  & `l2fc group (PHG/PNG)` < -0.7),
-                                       aes(label = Genes),
-                                       size = 1.8,
+                                       Process != "n.d."),
+                                       aes(label = Genes, color = Process),
+                                       size = 2.5,
                                        seed = 1234,
-                                       color = "black",
-                                       box.padding = 0.3,
-                                       max.overlaps = 17,
+                                       box.padding = 0.6,
+                                       max.overlaps = Inf,
                                        alpha = 1,
                           min.segment.length = 0)+
          theme_bw()+
@@ -584,10 +628,15 @@ plot_volcano <- ggplot(data_volcano %>%
                panel.background = element_blank(), 
                axis.ticks = element_line(colour = "black"),
                axis.line = element_blank())+
-                   theme(legend.position = "none", 
-        legend.box.spacing = unit(0.8, 'mm'), 
-        legend.title = element_blank(), 
-        legend.text = element_blank())+
+                    theme(legend.position=c("top"), 
+                            legend.box.spacing = unit(0.5, 'mm'), 
+                            legend.title = element_blank(), 
+                            legend.text = element_text(size = 8),
+                            legend.spacing.y  = unit(0.01, 'mm'),
+                            legend.spacing.x  = unit(0.01, 'mm'),
+                            legend.margin=margin(0,0,0,0),
+                            legend.box.margin=margin(-1.5,0,0,0)) + 
+        guides(color = guide_legend(nrow=2, byrow=TRUE, keyheight=0.15, keywidth = 0.1, override.aes = list(size=4)))+
         theme(axis.title = element_text(size  = 9), 
                axis.text.x = element_text(size = 9, colour = "black", vjust = -0.1), 
                axis.text.y = element_text(size = 9, colour = "black"))+
@@ -643,6 +692,21 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
 
     ## Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
     ## ℹ Please use `linewidth` instead.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+    ## Warning: There was 1 warning in `mutate()`.
+    ## ℹ In argument: `across(where(is.numeric), round, 3)`.
+    ## Caused by warning:
+    ## ! The `...` argument of `across()` is deprecated as of dplyr 1.1.0.
+    ## Supply arguments directly to `.fns` through an anonymous function instead.
+    ## 
+    ##   # Previously
+    ##   across(a:b, mean, na.rm = TRUE)
+    ## 
+    ##   # Now
+    ##   across(a:b, \(x) mean(x, na.rm = TRUE))
 
 ![](proteomics_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
@@ -692,7 +756,7 @@ pca_fn <- function(data, conditions_file, id_name, scale) {
 data_pca <- pca_fn(data_stat, conditions, id_name = "Genes", scale = F)
 ```
 
-    ## Joining, by = "Bioreplicate"
+    ## Joining with `by = join_by(Bioreplicate)`
 
 #### PCA plot
 
@@ -712,7 +776,7 @@ theme_bw() + theme(panel.border = element_rect(linewidth = 1, colour = "black"),
                    axis.text.y = element_text(size = 9, colour="black"),
 panel.grid.major = element_line(), panel.grid.minor = element_blank())+
 theme(legend.title = element_text(colour="black", size=9))+
-guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
        col = guide_legend(order = 1))+
   theme(legend.position = "top", 
         legend.box.spacing = unit(0.8, 'mm'), 
@@ -979,7 +1043,7 @@ plot_ora <- ggplot(ora_data_plot, aes(x = `Fold enrichment`, y= `Biological proc
 ``` r
 p0     <- rectGrob(width = 1, height = 1)
 plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("B", "C"), font.label = list(size = 17),
-          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-w1,7.1-w1))
+          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-(1.15*w1),7.1-w1))
 plot_2 <- ggarrange(plot_hmap, NA, nrow = 2, heights = c(h1, 5.82-h1), widths = c(w1,w1))
 ```
 
@@ -991,35 +1055,32 @@ plot_3 <- plot_grid(plot_2, plot_1, rel_widths = c(w1, 7.1-w1), rel_heights = c(
 plot_4 <- plot_grid(plot_3, p0, ncol = 1, rel_widths = c(1,1), rel_heights = c(h1+(5.82-h1), 0.1))
 plot_5 <- plot_grid(plot_4, plot_ora, ncol = 1, rel_widths = c(w1+7.1-w1, w1+7.1-w1), 
                     rel_heights = c(h1+0.5+(5.82-h1), 2.6), labels = c('','D'),  label_size = 17)
-ggsave("proteomics_main.svg", width = 7.1, height = h1+0.5+(5.82-h1)+2.6)
+ggsave("proteomics_main.png", width = 7.1, height = h1+0.5+(5.82-h1)+2.6)
 ```
-
-    ## Warning: ggrepel: 58 unlabeled data points (too many overlaps). Consider
-    ## increasing max.overlaps
 
 ### save data in a supplementary tables
 
 ``` r
-if (!file.exists("Supplementary table 1.xlsx")) {
+if (!file.exists("Supplementary table 2.xlsx")) {
   
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ora)
-write.xlsx(as.data.frame(ora_data), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1D", 
+write.xlsx(as.data.frame(ora_data), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1E", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2E", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 }

@@ -185,8 +185,11 @@ rm(n_total_afterfiltering, n_missing_afterfiltering, perc_missing_afterfiltering
 
 ### missing value imputation 
 ```{r}
+# as it takes long time execute only if the imputed file does not exists
+if (!exists("data_imputed_RF")) {
 set.seed(12345)
 system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_filtered)))
+}
 ```
 
 
@@ -481,10 +484,18 @@ data_volcano <- anova_results %>%
                 `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) | `Adjusted p-value group (PHG/PNG)` < 0.05 & 
                 `l2fc group (PHG/PNG)` < -log2(1.5) ~ "+", TRUE ~ "n.s."),
                 diff_abundant = case_when(
-                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5) ~ "Increased_in_PHG",
+                `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` > log2(1.5)  ~ "Increased_in_PHG",
                 `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` < -log2(1.5) ~ "Decreased_in_PHG",
              TRUE ~ "n.s."
-           )) 
+           )) %>% 
+  mutate(Process = case_when(Genes == "ABCB4"|Genes =="LTA4H"|Genes =="CHDH"|
+                             Genes =="CHKA"|Genes =="PCYT2"|Genes =="CHPT1"|
+                             Genes =="MAT2A"|Genes =="PLA2G4A"|Genes =="PEMT"|Genes =="BHMT"|
+                             Genes =="LPCAT3" ~ "PC homeostasis", 
+                             Genes == "ACACA"|Genes == "FASN"|Genes == "DGAT1" ~ "Lipogenesis",
+                             Genes == "ACSL6"|Genes == "ACADL"|Genes == "ACADVL"|Genes == "HADHA"|Genes == "HADHB" ~ "Beta-oxidation", 
+                             Genes == "PCK1" ~ "Gluconeogenesis",
+                             Genes == "TAT"  ~ "AA metabolism", TRUE ~ "n.d."))
 ```
 
 
@@ -493,22 +504,21 @@ data_volcano <- anova_results %>%
 plot_volcano <- ggplot(data_volcano %>%                       
                        arrange(desc(diff_abundant)), 
                        mapping = aes(x = `l2fc group (PHG/PNG)`, y = -log10(`p-value group (PHG/PNG)`), 
-                                     fill=diff_abundant, label = Genes, 
-                                     alpha = diff_abundant))+
-         geom_point(aes(shape =diff_abundant, size = diff_abundant), stroke = 0.25)+
-         scale_shape_manual(values = c(n.s. = 16, Decreased_in_PHG =21, Increased_in_PHG =21))+
-         scale_size_manual(values=c(n.s. = 1, Decreased_in_PHG =1.6, Increased_in_PHG =1.6))+
-         scale_fill_manual(values=c("n.s." = "#999999", 
-                                    "Decreased_in_PHG"= "#0088AA", "Increased_in_PHG"="#e95559ff"))+
-         scale_alpha_manual(values= c("n.s." = 0.3, "Decreased_in_PHG"= 1, "Increased_in_PHG"= 1))+
+                                     label = Genes))+
+         geom_point(shape = 20, alpha= 0.8, color = "grey", stroke = 0.25, size = 1.2)+
+         scale_color_manual(values=c("PC homeostasis"  = "#6A3D9A", 
+                                    "Gluconeogenesis"  = "#009E73",      
+                                    "Beta-oxidation"   = "#E31A1C",
+                                    "AA metabolism"    = "#B2DF8A",
+                                    "Lipogenesis"      = "#0072B2"))+
+         geom_hline(yintercept = -log10(0.001976451))+
          geom_text_repel(data = subset(data_volcano, 
-                                       significant == "+" & `l2fc group (PHG/PNG)` > 0.6 | significant == "+"  & `l2fc group (PHG/PNG)` < -0.7),
-                                       aes(label = Genes),
-                                       size = 1.8,
+                                       Process != "n.d."),
+                                       aes(label = Genes, color = Process),
+                                       size = 2.5,
                                        seed = 1234,
-                                       color = "black",
-                                       box.padding = 0.3,
-                                       max.overlaps = 17,
+                                       box.padding = 0.6,
+                                       max.overlaps = Inf,
                                        alpha = 1,
                           min.segment.length = 0)+
          theme_bw()+
@@ -520,10 +530,15 @@ plot_volcano <- ggplot(data_volcano %>%
                panel.background = element_blank(), 
                axis.ticks = element_line(colour = "black"),
                axis.line = element_blank())+
-                   theme(legend.position = "none", 
-        legend.box.spacing = unit(0.8, 'mm'), 
-        legend.title = element_blank(), 
-        legend.text = element_blank())+
+                    theme(legend.position=c("top"), 
+                            legend.box.spacing = unit(0.5, 'mm'), 
+                            legend.title = element_blank(), 
+                            legend.text = element_text(size = 8),
+                            legend.spacing.y  = unit(0.01, 'mm'),
+                            legend.spacing.x  = unit(0.01, 'mm'),
+                            legend.margin=margin(0,0,0,0),
+                            legend.box.margin=margin(-1.5,0,0,0)) + 
+        guides(color = guide_legend(nrow=2, byrow=TRUE, keyheight=0.15, keywidth = 0.1, override.aes = list(size=4)))+
         theme(axis.title = element_text(size  = 9), 
                axis.text.x = element_text(size = 9, colour = "black", vjust = -0.1), 
                axis.text.y = element_text(size = 9, colour = "black"))+
@@ -640,7 +655,7 @@ theme_bw() + theme(panel.border = element_rect(linewidth = 1, colour = "black"),
                    axis.text.y = element_text(size = 9, colour="black"),
 panel.grid.major = element_line(), panel.grid.minor = element_blank())+
 theme(legend.title = element_text(colour="black", size=9))+
-guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(0,1))),
+guides(shape = guide_legend(order = 2, override.aes = list(stroke = 1, shape  = c(1,0))),
        col = guide_legend(order = 1))+
   theme(legend.position = "top", 
         legend.box.spacing = unit(0.8, 'mm'), 
@@ -868,7 +883,7 @@ plot_ora <- ggplot(ora_data_plot, aes(x = `Fold enrichment`, y= `Biological proc
 ```{r}
 p0     <- rectGrob(width = 1, height = 1)
 plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("B", "C"), font.label = list(size = 17),
-          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-w1,7.1-w1))
+          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-(1.15*w1),7.1-w1))
 plot_2 <- ggarrange(plot_hmap, NA, nrow = 2, heights = c(h1, 5.82-h1), widths = c(w1,w1))
 plot_3 <- plot_grid(plot_2, plot_1, rel_widths = c(w1, 7.1-w1), rel_heights = c(h1+(5.82-h1), h1+(5.82-h1)), labels = c('A'), label_size = 17)
 plot_4 <- plot_grid(plot_3, p0, ncol = 1, rel_widths = c(1,1), rel_heights = c(h1+(5.82-h1), 0.1))
@@ -880,26 +895,26 @@ ggsave("proteomics_main.svg", width = 7.1, height = h1+0.5+(5.82-h1)+2.6)
 
 ### save data in a supplementary tables
 ```{r}
-if (!file.exists("Supplementary table 1.xlsx")) {
+if (!file.exists("Supplementary table 2.xlsx")) {
   
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ora)
-write.xlsx(as.data.frame(ora_data), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1D", 
+write.xlsx(as.data.frame(ora_data), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1E", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2E", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 2.xlsx", sheetName = "Suppl table 2F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 }
