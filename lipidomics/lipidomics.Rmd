@@ -718,34 +718,35 @@ ggsave("lipidomics_suppl.svg", width = 7.1, height = 2*3.4)
 
 ### save data in a supplementary tables
 ```{r}
-if (!file.exists("Supplementary table 3.xlsx")) {
+if (!file.exists("Supplementary table 1.xlsx")) {
   
 # lipidomics data (all)
-write.xlsx(as.data.frame(lipidomics_data), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3A", 
+write.xlsx(as.data.frame(lipidomics_data), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1A", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (all)
-write.xlsx(as.data.frame(anova_results), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3B", 
+write.xlsx(as.data.frame(anova_results), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1B", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (group)
-write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3C", 
+write.xlsx(as.data.frame(anova_results_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1C", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (sex)
-write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3D", 
+write.xlsx(as.data.frame(anova_results_sex), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1D", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (interaction) 
-write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3E", 
+write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted p-value group:sex`))), 
+           file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1E", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios)
-write.xlsx(as.data.frame(anova_results_class), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3F", 
+write.xlsx(as.data.frame(anova_results_class), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios significant by group)
-write.xlsx(as.data.frame(anova_results_class_group), file = "Supplementary table 3.xlsx", sheetName = "Suppl table 3G", 
+write.xlsx(as.data.frame(anova_results_class_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1G", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 
