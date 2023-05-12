@@ -242,7 +242,7 @@ system.time(data_imputed_RF <- missForest::missForest(as.matrix(proteingroups_fi
 ```
 
     ##    user  system elapsed 
-    ## 1447.54    3.08 1451.22
+    ## 1463.94    3.96 1468.63
 
 #### save imputed protein groups data
 
@@ -586,13 +586,30 @@ data_volcano <- anova_results %>%
                 `Adjusted p-value group (PHG/PNG)` < 0.05 & `l2fc group (PHG/PNG)` < -log2(1.5) ~ "Decreased_in_PHG",
              TRUE ~ "n.s."
            )) %>% 
-  mutate(Process = case_when(Genes == "ABCB4"|Genes =="LTA4H"|Genes =="CHDH"|
-                             Genes =="CHKA"|Genes =="PCYT2"|Genes =="CHPT1"|
-                             Genes =="MAT2A"|Genes =="PLA2G4A"|Genes =="PEMT"|Genes =="BHMT"|
-                             Genes =="LPCAT3" ~ "PC homeostasis", 
-                             Genes == "ACACA"|Genes == "FASN"|Genes == "DGAT1" ~ "Lipogenesis",
-                             Genes == "ACSL6"|Genes == "ACADL"|Genes == "ACADVL"|Genes == "HADHA"|Genes == "HADHB" ~ "Beta-oxidation", 
-                             Genes == "PCK1" ~ "Gluconeogenesis",
+  mutate(Process = case_when(Genes ==  "ABCB4"|
+                             Genes ==  "LTA4H"|
+                             Genes ==   "CHDH"|
+                             Genes ==   "CHKA"|
+                             Genes ==  "PCYT2"|
+                             Genes ==  "CHPT1"|
+                             Genes ==  "MAT2A"|
+                             Genes =="PLA2G4A"|
+                             Genes ==   "PEMT"|
+                             Genes ==   "BHMT"|
+                             Genes ==  "LPCAT3" ~ "PC homeostasis", 
+                             Genes == "ACACA"|
+                             Genes ==  "FASN"|
+                             Genes == "DGAT1"   ~ "Lipogenesis",
+                             Genes ==  "ACSL6"|
+                             Genes ==  "ACADL"|
+                             Genes == "ACADVL"|
+                             Genes ==  "HADHA"|
+                             Genes == "HADHB"   ~ "Beta-oxidation", 
+                             Genes == "PCK1"    ~ "Gluconeogenesis",
+                             Genes ==  "ISG15"|
+                             Genes ==    "MX2"|
+                             Genes ==  "IFI44"|
+                             Genes ==  "IFIT5"  ~ "ISGs",
                              Genes == "TAT"  ~ "AA metabolism", TRUE ~ "n.d."))
 ```
 
@@ -603,19 +620,20 @@ plot_volcano <- ggplot(data_volcano %>%
                        arrange(desc(diff_abundant)), 
                        mapping = aes(x = `l2fc group (PHG/PNG)`, y = -log10(`p-value group (PHG/PNG)`), 
                                      label = Genes))+
-         geom_point(shape = 20, alpha= 0.8, color = "grey", stroke = 0.25, size = 1.2)+
+         geom_point(shape = 20, alpha= 0.9, color = "grey", stroke = 0.25, size = 1.2)+
          scale_color_manual(values=c("PC homeostasis"  = "#6A3D9A", 
                                     "Gluconeogenesis"  = "#009E73",      
                                     "Beta-oxidation"   = "#E31A1C",
                                     "AA metabolism"    = "#B2DF8A",
+                                    "ISGs"             = "black",
                                     "Lipogenesis"      = "#0072B2"))+
          geom_hline(yintercept = -log10(0.001976451))+
          geom_text_repel(data = subset(data_volcano, 
                                        Process != "n.d."),
                                        aes(label = Genes, color = Process),
-                                       size = 2.5,
+                                       size = 2.1,
                                        seed = 1234,
-                                       box.padding = 0.6,
+                                       box.padding = 0.5,
                                        max.overlaps = Inf,
                                        alpha = 1,
                           min.segment.length = 0)+
@@ -1043,7 +1061,7 @@ plot_ora <- ggplot(ora_data_plot, aes(x = `Fold enrichment`, y= `Biological proc
 ``` r
 p0     <- rectGrob(width = 1, height = 1)
 plot_1 <- ggarrange(plot_pca, plot_volcano, labels = c("B", "C"), font.label = list(size = 17),
-          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-(1.15*w1),7.1-w1))
+          ncol = 1, nrow = 2, widths = c(7.1-w1,7.1-w1), heights = c(7.1-(1.18*w1),7.1-w1))
 plot_2 <- ggarrange(plot_hmap, NA, nrow = 2, heights = c(h1, 5.82-h1), widths = c(w1,w1))
 ```
 
@@ -1055,7 +1073,7 @@ plot_3 <- plot_grid(plot_2, plot_1, rel_widths = c(w1, 7.1-w1), rel_heights = c(
 plot_4 <- plot_grid(plot_3, p0, ncol = 1, rel_widths = c(1,1), rel_heights = c(h1+(5.82-h1), 0.1))
 plot_5 <- plot_grid(plot_4, plot_ora, ncol = 1, rel_widths = c(w1+7.1-w1, w1+7.1-w1), 
                     rel_heights = c(h1+0.5+(5.82-h1), 2.6), labels = c('','D'),  label_size = 17)
-ggsave("proteomics_main.png", width = 7.1, height = h1+0.5+(5.82-h1)+2.6)
+ggsave("proteomics_main.svg", width = 7.1, height = h1+0.5+(5.82-h1)+2.6)
 ```
 
 ### save data in a supplementary tables
