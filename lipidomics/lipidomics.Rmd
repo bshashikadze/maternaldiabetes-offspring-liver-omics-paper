@@ -596,6 +596,51 @@ plot_class <- bar_chart_fn(data_statistics = anova_results_class %>% filter(Lipi
 ggsave("DAG_TAG.pdf", width = 4, height = 2.75)
 ```
 
+
+## plot anova interactions
+```{r fig.height=8.4, fig.width=6.4}
+# reorder data
+anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("PNG", "PHG"))
+
+# plot
+ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
+  geom_line(size = 0.8, aes(group = Sex, color = Sex))+
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                 position=position_dodge(0.05))+
+  geom_point(aes(color = Sex))+
+  scale_color_manual(values = c("#F0E442", "#E69F00"))+
+  theme_bw()+
+  xlab("")+
+  theme(panel.border = element_rect(linewidth = 1, colour = "black"),
+       panel.grid.major = element_blank(), 
+       panel.grid.minor = element_blank(), 
+       panel.background = element_blank(), 
+       axis.line = element_blank(),
+  legend.position = "NONE") +
+  theme(axis.title = element_text(size = 10), 
+        axis.text.x = element_text(size= 9, colour = "black", vjust = -0.1), 
+        axis.ticks = element_line(colour = "black"),
+        axis.text.y = element_text(size = 9, colour = "black"))+
+  theme(legend.position = "bottom", legend.title = element_text(size = 8.5), axis.text = element_text(size = 8.5))+
+  facet_wrap(~factor(Lipid, levels=unique(anova_results_int_tuk[[1]]$Lipid)), scales = "free", ncol = 5) +
+  ylab("log2 lipid concentration (nmol/g)")+
+  geom_text(x = Inf, y = -Inf, 
+            aes(label = paste("p=",`Adjusted p-value group:sex`)),  
+            size = 2.8, 
+            angle = 90,
+            hjust = -0.7, 
+            vjust = -0.7, 
+            data = anova_results_int_tuk[[1]] %>% 
+                        mutate(across(where(is.numeric), round, 3)), inherit.aes = F)+
+  theme(strip.background = element_blank(), strip.text = element_text())
+ggsave("anova_interactions_lip.svg", width = 6.4, height = 4)
+```
+
+
+
+
+
+
 ## save results
 
 ### combine plots
@@ -635,11 +680,17 @@ write.xlsx(as.data.frame(anova_results_int_tuk[[1]] %>% arrange(-desc(`Adjusted 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios)
-write.xlsx(as.data.frame(anova_results_class), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
+write.xlsx(as.data.frame(anova_results_class %>% 
+                           left_join(lipidomics_data %>% select(Lipid, Type)) %>% 
+                           mutate(Type = str_remove(Type, fixed("(lipid class)"))) %>% 
+                           relocate(Type, .after = Lipid)), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1F", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 # anova results (ratios significant by group)
-write.xlsx(as.data.frame(anova_results_class_group), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1G", 
+write.xlsx(as.data.frame(anova_results_class_group%>% 
+                           left_join(lipidomics_data %>% select(Lipid, Type)) %>% 
+                           mutate(Type = str_remove(Type, fixed("(lipid class)"))) %>% 
+                           relocate(Type, .after = Lipid)), file = "Supplementary table 1.xlsx", sheetName = "Suppl table 1G", 
   col.names = TRUE, row.names = FALSE, append = T)
 
 
