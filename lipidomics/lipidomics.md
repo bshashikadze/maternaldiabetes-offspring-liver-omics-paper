@@ -703,7 +703,7 @@ ggsave("DAG_TAG.pdf", width = 4, height = 2.75)
 anova_results_int_tuk[[2]]$Group <- factor(anova_results_int_tuk[[2]]$Group, levels = c("PNG", "PHG"))
 
 # plot
-ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
+int <- ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
   geom_line(size = 0.8, aes(group = Sex, color = Sex))+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                  position=position_dodge(0.05))+
@@ -741,8 +741,6 @@ ggplot(anova_results_int_tuk[[2]], aes(x=Group, y=mean)) +
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
 
-![](lipidomics_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
-
 ``` r
 ggsave("anova_interactions_lip.svg", width = 6.4, height = 4)
 ```
@@ -763,7 +761,8 @@ plot_0 <- ggarrange(NA, plot_volcano, ncol = 1, nrow = 2, widths = c(3.4,3.4), h
 ``` r
 plot_1 <- ggarrange(plot_pca, plot_0, labels = c("A", "B"), font.label = list(size = 17),
           ncol = 2, nrow = 1, widths = c(3.4,3.4), heights = c(3.4,3.4))
-ggsave("lipidomics_suppl.svg", width = 7.1, height = 3.4)
+plot_2 <- ggarrange(plot_1, int, nrow = 2)
+ggsave("lipidomics_suppl.svg", width = 7.1, height = 3.4*2)
 ```
 
 ### save data in a supplementary tables
@@ -809,9 +808,6 @@ write.xlsx(as.data.frame(anova_results_class_group%>%
 
 }
 ```
-
-    ## Joining with `by = join_by(Lipid)`
-    ## Joining with `by = join_by(Lipid)`
 
 ``` r
 save.image()
