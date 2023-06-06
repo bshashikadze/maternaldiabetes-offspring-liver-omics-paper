@@ -650,9 +650,9 @@ bar_chart_fn <- function(data_statistics,
 # plot TAG and DAG
 plot_class <- bar_chart_fn(data_statistics = anova_results_class %>% filter(Lipid == "TG" |
                                                                             Lipid == "DG"), 
-                            numeric_data = data_stat_class, n_widht = 0.95, 
+                            numeric_data = data_stat_class, n_widht = 0.812, 
                             jitt_widht = 0.1,  
-                            point_size = 2, 
+                            point_size = 1.5, 
                             strip_text_size = 10,
                             id_name = "Lipid", 
                             conditions_data = conditions) +
@@ -693,7 +693,7 @@ plot_class <- bar_chart_fn(data_statistics = anova_results_class %>% filter(Lipi
     ##   across(a:b, \(x) mean(x, na.rm = TRUE))
 
 ``` r
-ggsave("DAG_TAG.pdf", width = 4, height = 2.75)
+ggsave("DAG_TAG.pdf", width = 3.3, height = 2.98)
 ```
 
 ## plot anova interactions
