@@ -361,22 +361,22 @@ data_volcano <- anova_results %>%
 ``` r
 plot_volcano <- ggplot(data_volcano %>%   
                          mutate(Type_new = case_when(Type == "Phosphatidylcholines" ~ "Phosphatidylcholines",
-                                                     Type == "Diacylglycerols"      ~ "Diacylglycerols",
-                                                     Type == "Triacylglycerols"     ~ "Triacylglycerols",
+                                                     Type == "Diglycerides"      ~ "Diglycerides",
+                                                     Type == "Triglycerides"     ~ "Triglycerides",
                                                      TRUE                           ~ "Others")) %>% 
                        arrange(desc(diff_abundant)), 
                        mapping = aes(x = `l2fc group (PHG/PNG)`, y = -log10(`p-value group (PHG/PNG)`), 
                                      fill=Type_new, label = Lipid, alpha = Type_new))+
          geom_point(aes(shape = diff_abundant, size = diff_abundant), stroke = 0.25)+
          scale_fill_manual(values=c("Phosphatidylcholines" = "#6A3D9A", 
-                                    "Diacylglycerols"      = "#B2DF8A",      
-                                    "Triacylglycerols"     = "#E31A1C",
+                                    "Diglycerides"      = "#B2DF8A",      
+                                    "Triglycerides"     = "#E31A1C",
                                     "Others"               = "grey"))+
          scale_shape_manual(values = c('Increased_in_PHG' = 24, 'Decreased_in_PHG' = 25, "n.s." = 21)) + 
          scale_size_manual(values = c('Increased_in_PHG' = 2.5, 'Decreased_in_PHG' = 2.5, "n.s." = 2)) + 
          scale_alpha_manual(values =c("Phosphatidylcholines" = 1, 
-                                    "Diacylglycerols"        = 1,      
-                                    "Triacylglycerols"       = 1,
+                                    "Diglycerides"        = 1,      
+                                    "Triglycerides"       = 1,
                                     "Others"                 = 0.8))+
          theme_bw()+
          theme(panel.border = element_rect(linewidth  = 1, color = "black"), 
@@ -761,7 +761,7 @@ plot_0 <- ggarrange(NA, plot_volcano, ncol = 1, nrow = 2, widths = c(3.4,3.4), h
 ``` r
 plot_1 <- ggarrange(plot_pca, plot_0, labels = c("A", "B"), font.label = list(size = 17),
           ncol = 2, nrow = 1, widths = c(3.4,3.4), heights = c(3.4,3.4))
-plot_2 <- ggarrange(plot_1, int, nrow = 2)
+plot_2 <- ggarrange(plot_1, int, labels = c("", "C"), font.label = list(size = 17), nrow = 2)
 ggsave("lipidomics_suppl.svg", width = 7.1, height = 3.4*2)
 ```
 
@@ -808,6 +808,9 @@ write.xlsx(as.data.frame(anova_results_class_group%>%
 
 }
 ```
+
+    ## Joining with `by = join_by(Lipid)`
+    ## Joining with `by = join_by(Lipid)`
 
 ``` r
 save.image()
