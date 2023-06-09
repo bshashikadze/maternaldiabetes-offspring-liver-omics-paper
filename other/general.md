@@ -1,4 +1,4 @@
-weight and HOMA-IR
+weight, insulin sensitivity and WBs
 ================
 BS
 10/05/2023
@@ -8,6 +8,8 @@ BS
 ``` r
 library(tidyverse)
 library(ggpubr)
+library(cowplot)
+library(grid)
 ```
 
 ## load data
@@ -15,7 +17,8 @@ library(ggpubr)
 ``` r
 weight            <- read.delim("weight.txt", sep = "\t", header = T) 
 conditions        <- read.delim("Conditions.txt", sep = "\t", header = T)
-HOMA_IR           <- read.delim("HOMA_IR.txt", sep = "\t", header = T)
+HOMA_index        <- read.delim("HOMA_index.txt", sep = "\t", header = T)
+confirmation_WB   <- read.delim("confirmation_WBs.txt", sep = "\t", header = T) 
 ```
 
 ## differential abundance analysis using 2 way ANOVA
@@ -234,62 +237,69 @@ ggarrange(body_w, rel_liver_w, common.legend = T, legend = "bottom", labels = c(
 ggsave("weights.svg", width = 4, height = 2.5)
 ```
 
-## HOMA-IR (Homeostatic Model Assessment for Insulin Resistance)
+## HOMA-index
 
 ``` r
-# make grouping
-HOMA_IR_tidy <- HOMA_IR %>% 
+# make new grouping
+HOMA_index_tidy <- HOMA_index %>% 
   mutate(Group_c = str_c(Group, " (", str_to_lower(Sex), ")"))
 
 
 # error bars
-error_bar_lipid <- HOMA_IR_tidy %>% 
-  group_by(Group_c) %>% 
-  summarise(mean = mean(HOMA_IR, na.rm=T), 
-            sd = sd(HOMA_IR, na.rm=T)) %>% 
+error_bar_homa <- HOMA_index_tidy %>% 
+  group_by(Type, Group_c) %>% 
+  summarise(mean = mean(Value, na.rm=T), 
+            sd = sd(Value, na.rm=T)) %>% 
   ungroup()
-  
-# prepare data for plotting
-  HOMA_IR_tidy <-  HOMA_IR_tidy %>% 
-    left_join(error_bar_lipid) 
 ```
 
-    ## Joining with `by = join_by(Group_c)`
+    ## `summarise()` has grouped output by 'Type'. You can override using the
+    ## `.groups` argument.
+
+``` r
+# prepare data for plotting
+HOMA_index_tidy <-  HOMA_index_tidy %>% 
+    left_join(error_bar_homa) 
+```
+
+    ## Joining with `by = join_by(Type, Group_c)`
 
 ``` r
 # which comparisons will be displayed
-IR_comparisons <- list(c("PNG (f)", "PHG (f)"), c("PNG (m)", "PHG (m)"),  c("PNG (f)", "PNG (m)"), c("PHG (f)", "PHG (m)"))
+HOMA_comparisons <- list(c("PNG (f)", "PHG (f)"), c("PNG (m)", "PHG (m)"),  c("PNG (f)", "PNG (m)"), c("PHG (f)", "PHG (m)"))
 
 
 # make new group order 
-HOMA_IR_tidy$Group_c <- factor(HOMA_IR_tidy$Group_c, levels = c("PNG (m)", "PHG (m)", "PNG (f)", "PHG (f)"))
+HOMA_index_tidy$Group_c <- factor(HOMA_index_tidy$Group_c, levels = c("PNG (m)", "PHG (m)", "PNG (f)", "PHG (f)"))
 
 
 # plot
-ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
+ggplot(HOMA_index_tidy, aes(x=Group_c, y=Value, fill = Group_c))+
+  facet_wrap(~factor(Type, levels = c("HOMA-IR", "QUICKI"))) +
   geom_bar(stat = "summary", fun = mean, aes(fill = Group_c), alpha = 1, color = "black", lwd=0.15,
-           width=2.1/length(unique(HOMA_IR_tidy$Group_c))) + 
-  geom_jitter(size = 2,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = 0.1)+
+           width=2.1/length(unique(HOMA_index_tidy$Group_c))) + 
+  geom_jitter(size = 1.5,  aes(shape = Sex), fill = "grey", alpha = 0.8, stroke =0.25, width = 0.1)+
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
                 position=position_dodge(0.05)) +
-  scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
+  scale_shape_manual(values = c('F' = 21, 'M' = 22)) +
   scale_fill_manual(values=c("PNG (f)" = "#0088AA", "PHG (f)" = "#e95559ff", "PNG (m)" = "#0088AA", "PHG (m)" = "#e95559ff")) +
   theme_bw() +
   ylab("") +
   xlab("") +
-  ggtitle("HOMA-IR")+
-  scale_y_continuous(breaks = c(0,1,2,3), limits = c(0,3))+
   theme(panel.border = element_rect(linewidth  = 1, colour = "black"),
-        axis.title = element_text(size =10, colour = "black"),
-        axis.text = element_text(size = 10, colour = "black"),
+        axis.title = element_text(size =9, colour = "black"),
+        axis.text = element_text(size = 9, colour = "black"),
+        axis.text.x = element_text(angle = 45, hjust = 1),
         axis.ticks = element_line(colour = "black"),
-        plot.title = element_text(size = 10, hjust = 0.5),
-        axis.title.x = element_text(size = 10), 
-        axis.title.y = element_text(size = 10)) +
-   stat_compare_means(comparisons = IR_comparisons, method = "t.test", method.args = list(var.equal = TRUE),
+        plot.title = element_blank(),
+        axis.title.x = element_text(size = 9), 
+        axis.title.y = element_text(size = 9)) +
+   stat_compare_means(comparisons = HOMA_comparisons, method = "t.test", method.args = list(var.equal = TRUE),
                      size = 3, label = "p.format")+
-                      theme(legend.position = "none")+
-  theme(plot.margin = margin(1,1,-2,1, "mm"))
+                    theme(legend.position = "none")+
+  theme(plot.margin = margin(1,1,-2,1, "mm"))+
+  theme(strip.text = element_text(size = 9),
+        strip.background = element_blank())
 ```
 
     ## [1] FALSE
@@ -297,5 +307,129 @@ ggplot(HOMA_IR_tidy, aes(x=Group_c, y=HOMA_IR, fill = Group_c))+
 ![](general_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 ``` r
-  ggsave("homa_ir.pdf", width = 2.8, height = 2.45)
+  ggsave("homa_index.pdf", width = 3.5, height = 3)
+```
+
+## confirmation Western blots
+
+``` r
+# function which performs plotting
+WB_plotting_fn <- function(numeric_data = confirmation_WB,
+                         conditions_data = conditions,
+                         id_name = "type",
+                         protein_name,
+                         n_widht= 0.8) {
+  
+  
+  # prepare data for error bar calculation
+  error_bar <- numeric_data %>% 
+  filter(protein == protein_name) %>%  
+  left_join(conditions_data) %>% 
+  group_by(!!as.symbol(id_name), Group) %>% 
+  summarise(mean = mean(Value, na.rm=T), 
+            sd = sd(Value, na.rm=T)) %>% 
+  ungroup()
+  
+  # prepare data for plotting
+  data_plot <- numeric_data %>% 
+  filter(protein == protein_name) %>%  
+  left_join(conditions_data) %>% 
+  ungroup() %>% 
+    left_join(error_bar) 
+  
+  
+  # reorder data
+  data_plot$Group <- factor(data_plot$Group, levels = c("PNG", "PHG"))
+  my_comparisons <- list(c("PNG", "PHG"))
+  
+  # plot
+  plot_data <- ggplot(data_plot, aes(x=Group, y=Value))+
+  geom_bar(stat = "summary", fun = mean, aes(fill = Group), alpha = 1, color = "black", lwd=0.15,
+           width=n_widht/length(unique(data_plot$Group))) + 
+  geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,
+                position=position_dodge(0.05)) +
+  scale_fill_manual(values=c('PNG' = "#0088AA", 'PHG' = "#e95559ff")) +
+  scale_shape_manual(values = c('F' = 21, 'M' = 22)) + 
+  theme_bw() +
+  xlab("") +
+  ylab("") +
+  theme(panel.border = element_rect(linewidth  = 1, colour = "black"),
+        axis.title = element_text(size = 9, colour = "black"),
+        axis.text = element_text(size = 9, colour = "black"),
+        axis.ticks = element_line(colour = "black"),
+        legend.position = "none") +
+   stat_compare_means(comparisons = my_comparisons, method = "t.test", size = 3,  method.args = list(var.equal = TRUE)) +
+   coord_flip()
+  
+  return(plot_data)
+ 
+ 
+}
+
+
+# plots
+ALDH1L2_plot <- WB_plotting_fn(numeric_data = confirmation_WB,
+                               conditions_data = conditions,
+                               id_name = "type",
+                               protein_name = "ALDH1L2",
+                               n_widht = 0.8)
+```
+
+    ## Joining with `by = join_by(ID)`
+    ## `summarise()` has grouped output by 'type'. You can override using the
+    ## `.groups` argument.
+    ## Joining with `by = join_by(ID)`
+    ## Joining with `by = join_by(type, Group)`
+
+    ## [1] FALSE
+
+``` r
+CLDN15_plot <- WB_plotting_fn(numeric_data = confirmation_WB,
+                               conditions_data = conditions,
+                               id_name = "type",
+                               protein_name = "CLDN15",
+                               n_widht = 0.8)
+```
+
+    ## Joining with `by = join_by(ID)`
+    ## `summarise()` has grouped output by 'type'. You can override using the
+    ## `.groups` argument.
+    ## Joining with `by = join_by(ID)`
+    ## Joining with `by = join_by(type, Group)`
+
+    ## [1] FALSE
+
+``` r
+RAB3D_plot <- WB_plotting_fn(numeric_data = confirmation_WB,
+                               conditions_data = conditions,
+                               id_name = "type",
+                               protein_name = "RAB3D",
+                               n_widht = 0.8)
+```
+
+    ## Joining with `by = join_by(ID)`
+    ## `summarise()` has grouped output by 'type'. You can override using the
+    ## `.groups` argument.
+    ## Joining with `by = join_by(ID)`
+    ## Joining with `by = join_by(type, Group)`
+
+    ## [1] FALSE
+
+``` r
+# combine plots
+p0     <- rectGrob(width = 1, height = 1)
+p1     <- plot_grid(p0, ALDH1L2_plot, rel_widths = c(0.8,1), labels = c("A"), label_size = 17)
+p2     <- plot_grid(p0, CLDN15_plot, rel_widths = c(0.8,1), labels = c("B"), label_size = 17)
+p3     <- plot_grid(p0, RAB3D_plot, rel_widths = c(0.8,1), labels = c("C"), label_size = 17)
+plot_grid(p1,p2,p3, common.legend = T, nrow = 3, ncol = 1)
+```
+
+    ## Warning in as_grob.default(plot): Cannot convert object of class logical into a
+    ## grob.
+
+![](general_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+``` r
+# save plots
+ggsave("confirmation_WB.svg", width = 7.1, height = 6)
 ```
